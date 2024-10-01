@@ -12,8 +12,18 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { MessageModule } from './message/message.module';
 import { NewMessageModule } from './new-message/new-message.module';
 import { SocketGateway } from 'socket.gateway';
-import { PaymentModule } from './payment/payment.module';
 import { MongooseModule } from '@nestjs/mongoose';
+import { BlogModule } from './blog/blog.module';
+import { WorkshopModule } from './workshop/workshop.module';
+import { PodcastModule } from './podcast/podcast.module';
+import { FavoritePodcastModule } from './favorite-podcast/favorite-podcast.module';
+import { TransactionModule } from './transaction/transaction.module';
+import { BullModule } from '@nestjs/bull';
+import { SurveyModule } from './survey/survey.module';
+import { SectionModule } from './section/section.module';
+import { QuestionModule } from './question/question.module';
+import { AnswerModule } from './answer/answer.module';
+import { DoctorScheduleModule } from './doctor-schedule/doctor-schedule.module';
 
 @Module({
   imports: [
@@ -45,6 +55,18 @@ import { MongooseModule } from '@nestjs/mongoose';
       }),
       inject: [ConfigService],
     }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        redis: {
+          host: configService.get<string>('REDIS_HOST'),
+          port: configService.get<number>('REDIS_PORT'),
+          username: configService.get<string>('REDIS_USERNAME'),
+          password: configService.get<string>('REDIS_PASSWORD'),
+        },
+      }),
+      inject: [ConfigService],
+    }),
     AuthModule,
     UserModule,
     RoleModule,
@@ -53,7 +75,17 @@ import { MongooseModule } from '@nestjs/mongoose';
     NotificationModule,
     MessageModule,
     NewMessageModule,
-    PaymentModule,
+    BlogModule,
+    WorkshopModule,
+    PodcastModule,
+    FavoritePodcastModule,
+    TransactionModule,
+    SurveyModule,
+    SectionModule,
+    QuestionModule,
+    AnswerModule,
+    ScheduleModule,
+    DoctorScheduleModule,
   ],
   providers: [SocketGateway],
 })

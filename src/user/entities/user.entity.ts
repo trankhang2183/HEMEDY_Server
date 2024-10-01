@@ -43,6 +43,14 @@ export class User {
   gender: string;
 
   @ApiProperty({
+    description: 'Account Balance of User',
+    example: 1000000,
+    required: false,
+  })
+  @Prop({ required: false, default: 0 })
+  account_balance: number;
+
+  @ApiProperty({
     description: 'Address of User',
     example: 'Ho Chi Minh',
     required: false,

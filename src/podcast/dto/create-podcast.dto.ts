@@ -1,0 +1,47 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { IsEnum, IsNotEmpty, IsString, IsUrl } from 'class-validator';
+import { PodcastTypeEnum } from '../enum/podcast-type.enum';
+
+export class CreatePodcastDto {
+  @ApiProperty({
+    description: 'Name of the podcast',
+    example: 'Tech Talks',
+  })
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @ApiProperty({
+    description: 'Link to the podcast audio',
+    example: 'https://example.com/audio.mp3',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @IsUrl()
+  audioLink: string;
+
+  @ApiProperty({
+    description: 'Image URL for the podcast',
+    example: 'https://example.com/image.jpg',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @IsUrl()
+  imgUrl: string;
+
+  @ApiProperty({
+    description: 'Author of the podcast',
+    example: 'John Doe',
+  })
+  @IsString()
+  @IsNotEmpty()
+  author: string;
+
+  @ApiProperty({
+    description: 'Type of the podcast',
+    example: PodcastTypeEnum.NEW,
+  })
+  @IsEnum(PodcastTypeEnum)
+  @IsNotEmpty()
+  type: PodcastTypeEnum;
+}

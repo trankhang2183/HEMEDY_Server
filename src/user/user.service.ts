@@ -3,6 +3,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { User, UserDocument } from './entities/user.entity';
 import { RoleEnum } from '../role/enum/role.enum';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -25,6 +26,8 @@ export class UserService {
 
     @InjectModel(Notification.name)
     private readonly notificationRepository: Model<Notification>,
+
+    private readonly configService: ConfigService,
   ) {}
 
   async getUsers(): Promise<[{ totalUsers: number }, User[]]> {
