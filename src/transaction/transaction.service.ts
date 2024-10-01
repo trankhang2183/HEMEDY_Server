@@ -10,8 +10,6 @@ import * as moment from 'moment';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from 'src/user/entities/user.entity';
 import { Model } from 'mongoose';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
 import { Transaction } from './entities/transaction.entity';
 import { PaymentTypeEnum } from './enum/paymen-type.enum';
 import { TransactionStatusEnum } from './enum/transaction-status.enum';
@@ -27,9 +25,6 @@ export class TransactionService {
 
     @InjectModel(Transaction.name)
     private readonly transactionModel: Model<Transaction>,
-
-    @InjectQueue('transaction')
-    private readonly transactionQueue: Queue,
   ) {}
 
   async addFundsByMoMo(

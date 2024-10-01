@@ -12,7 +12,6 @@ import { ConfigService } from '@nestjs/config';
 import { NotificationService } from 'src/notification/notification.service';
 import { UserService } from 'src/user/user.service';
 import { Transaction, TransactionSchema } from './entities/transaction.entity';
-import { BullModule } from '@nestjs/bull';
 
 @Module({
   imports: [
@@ -22,9 +21,6 @@ import { BullModule } from '@nestjs/bull';
       { name: Notification.name, schema: NotificationSchema },
       { name: Transaction.name, schema: TransactionSchema },
     ]),
-    BullModule.registerQueue({
-      name: 'transaction',
-    }),
   ],
   controllers: [TransactionController],
   providers: [

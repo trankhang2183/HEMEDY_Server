@@ -8,7 +8,6 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { RefreshTokenModule } from './refresh-token/refresh-token.module';
 import { NotificationModule } from './notification/notification.module';
 import * as momentTimezone from 'moment-timezone';
-import { ScheduleModule } from '@nestjs/schedule';
 import { MessageModule } from './message/message.module';
 import { NewMessageModule } from './new-message/new-message.module';
 import { SocketGateway } from 'socket.gateway';
@@ -18,7 +17,6 @@ import { WorkshopModule } from './workshop/workshop.module';
 import { PodcastModule } from './podcast/podcast.module';
 import { FavoritePodcastModule } from './favorite-podcast/favorite-podcast.module';
 import { TransactionModule } from './transaction/transaction.module';
-import { BullModule } from '@nestjs/bull';
 import { SurveyModule } from './survey/survey.module';
 import { SectionModule } from './section/section.module';
 import { QuestionModule } from './question/question.module';
@@ -30,7 +28,6 @@ import { DoctorScheduleModule } from './doctor-schedule/doctor-schedule.module';
     ConfigModule.forRoot({
       envFilePath: '.env',
     }),
-    ScheduleModule.forRoot(),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -55,18 +52,6 @@ import { DoctorScheduleModule } from './doctor-schedule/doctor-schedule.module';
       }),
       inject: [ConfigService],
     }),
-    BullModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        redis: {
-          host: configService.get<string>('REDIS_HOST'),
-          port: configService.get<number>('REDIS_PORT'),
-          username: configService.get<string>('REDIS_USERNAME'),
-          password: configService.get<string>('REDIS_PASSWORD'),
-        },
-      }),
-      inject: [ConfigService],
-    }),
     AuthModule,
     UserModule,
     RoleModule,
@@ -84,7 +69,6 @@ import { DoctorScheduleModule } from './doctor-schedule/doctor-schedule.module';
     SectionModule,
     QuestionModule,
     AnswerModule,
-    ScheduleModule,
     DoctorScheduleModule,
   ],
   providers: [SocketGateway],
