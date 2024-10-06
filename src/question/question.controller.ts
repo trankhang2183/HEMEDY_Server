@@ -49,18 +49,6 @@ export class QuestionController {
   }
 
   @ApiOperation({
-    summary: 'Get all questions',
-  })
-  @ApiOkResponse({
-    description: 'Successfully retrieved all questions',
-    type: [Question],
-  })
-  @Get()
-  getAllQuestions(): Promise<Question[]> {
-    return this.questionService.getAllQuestions();
-  }
-
-  @ApiOperation({
     summary: 'Get a question by ID',
   })
   @ApiOkResponse({

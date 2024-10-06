@@ -14,7 +14,7 @@ export class Question {
     example: 1,
   })
   @Prop({ required: true })
-  No: number;
+  no: number;
 
   @ApiProperty({
     description: 'Content of the question',

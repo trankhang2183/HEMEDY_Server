@@ -14,14 +14,14 @@ export class Section {
     example: 1,
   })
   @Prop({ required: true })
-  No: number;
+  no: number;
 
   @ApiProperty({
     description: 'Content of the section',
     example: 'This is the content of section 1.',
   })
   @Prop({ required: true })
-  Content: string;
+  content: string;
 
   @ApiProperty({
     description: 'Type of the section',

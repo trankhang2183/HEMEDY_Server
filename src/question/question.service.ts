@@ -1,31 +1,82 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
+import { Connection, Model } from 'mongoose';
 import { Question } from './entities/question.entity';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
+import { Section } from 'src/section/entities/section.entity';
+import { Answer } from 'src/answer/entities/answer.entity';
 
 @Injectable()
 export class QuestionService {
   constructor(
-    @InjectModel(Question.name)
-    private readonly questionModel: Model<Question>,
+    @InjectModel(Section.name) private readonly sectionModel: Model<Section>,
+    @InjectModel(Question.name) private readonly questionModel: Model<Question>,
+    @InjectModel(Answer.name) private readonly answerModel: Model<Answer>,
+    @InjectConnection() private readonly connection: Connection,
   ) {}
 
-  // Create a new question
   async createQuestion(
     createQuestionDto: CreateQuestionDto,
   ): Promise<Question> {
-    const newQuestion = new this.questionModel(createQuestionDto);
-    return await newQuestion.save();
+    const session = await this.connection.startSession();
+    session.startTransaction();
+
+    try {
+      const { section_id, no, content, answer_list } = createQuestionDto;
+
+      const section = await this.sectionModel
+        .findById(section_id)
+        .session(session);
+      if (!section) {
+        throw new NotFoundException('Section not found');
+      }
+
+      const answerDocs = [];
+      for (const answer of answer_list) {
+        const checkExistAnswer = await this.answerModel
+          .findOne({ score: answer.score })
+          .session(session);
+        if (checkExistAnswer) {
+          answerDocs.push(checkExistAnswer);
+        } else {
+          const createdAnswer = new this.answerModel({
+            content: answer.content,
+            score: answer.score,
+          });
+          const savedAnswer = await createdAnswer.save({ session });
+          answerDocs.push(savedAnswer);
+        }
+      }
+
+      const createdQuestion = new this.questionModel({
+        no,
+        content,
+        answer_list_id: answerDocs.map((answer) => answer._id),
+      });
+      const savedQuestion = await createdQuestion.save({ session });
+
+      section.question_list_id.push(savedQuestion);
+      await section.save({ session });
+
+      await session.commitTransaction();
+      return savedQuestion;
+    } catch (error) {
+      await session.abortTransaction();
+      console.error('Create question transaction failed:', error);
+      throw new InternalServerErrorException(
+        'Transaction failed and was rolled back',
+        error.message,
+      );
+    } finally {
+      session.endSession();
+    }
   }
 
-  // Get all questions
-  async getAllQuestions(): Promise<Question[]> {
-    return await this.questionModel.find().populate('answer_list_id').exec();
-  }
-
-  // Get a question by ID
   async getQuestionById(questionId: string): Promise<Question> {
     const question = await this.questionModel
       .findById(questionId)
@@ -37,7 +88,6 @@ export class QuestionService {
     return question;
   }
 
-  // Update a question by ID
   async updateQuestion(
     questionId: string,
     updateQuestionDto: UpdateQuestionDto,
@@ -51,14 +101,42 @@ export class QuestionService {
     return updatedQuestion;
   }
 
-  // Delete a question by ID
   async deleteQuestion(questionId: string): Promise<string> {
-    const result = await this.questionModel
-      .findByIdAndDelete(questionId)
-      .exec();
-    if (!result) {
-      throw new NotFoundException(`Question with ID ${questionId} not found`);
+    const session = await this.connection.startSession();
+    session.startTransaction();
+
+    try {
+      const question = await this.questionModel
+        .findById(questionId)
+        .session(session);
+      if (!question) {
+        throw new NotFoundException(`Question with ID ${questionId} not found`);
+      }
+
+      await this.answerModel
+        .deleteMany({ _id: { $in: question.answer_list_id } })
+        .session(session);
+
+      await this.questionModel.findByIdAndDelete(questionId).session(session);
+
+      await this.sectionModel
+        .updateMany(
+          { question_list_id: questionId },
+          { $pull: { question_list_id: questionId } },
+        )
+        .session(session);
+
+      await session.commitTransaction();
+      return `Question with ID ${questionId} and all related answers deleted successfully`;
+    } catch (error) {
+      await session.abortTransaction();
+      console.error('Delete question transaction failed:', error);
+      throw new InternalServerErrorException(
+        'Failed to delete question and related data',
+        error.message,
+      );
+    } finally {
+      session.endSession();
     }
-    return `Question with ID ${questionId} deleted`;
   }
 }

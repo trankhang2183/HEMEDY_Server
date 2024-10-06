@@ -6,6 +6,7 @@ import {
   Body,
   Param,
   UseGuards,
+  Delete,
 } from '@nestjs/common';
 import { AnswerService } from './answer.service';
 import { CreateAnswerDto } from './dto/create-answer.dto';
@@ -92,5 +93,23 @@ export class AnswerController {
     @Body() updateAnswerDto: UpdateAnswerDto,
   ): Promise<Answer> {
     return this.answerService.updateAnswer(answerId, updateAnswerDto);
+  }
+
+  @ApiOperation({
+    summary: 'Delete a Answer by ID (Admin only)',
+  })
+  @ApiOkResponse({
+    description: 'Answer has been successfully deleted',
+  })
+  @ApiNotFoundResponse({
+    description: 'Answer with ID ${answerId} not found',
+  })
+  @Delete(':answerId')
+  @Roles(RoleEnum.ADMIN)
+  @UseGuards(RolesGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtGuard)
+  deleteAnswer(@Param('answerId') answerId: string): Promise<string> {
+    return this.answerService.deleteAnswer(answerId);
   }
 }

@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateFavoritePodcastDto } from './dto/create-favorite-podcast.dto';
@@ -53,9 +49,7 @@ export class FavoritePodcastService {
       .populate('podcast_list_id')
       .exec();
     if (!favoritePodcast) {
-      throw new InternalServerErrorException(
-        `Something went wrong when retrieving Favorite Podcast`,
-      );
+      throw new NotFoundException(`User have no Favorite Podcast`);
     }
     return favoritePodcast;
   }

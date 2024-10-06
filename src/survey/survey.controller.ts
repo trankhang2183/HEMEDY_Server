@@ -2,15 +2,14 @@ import {
   Controller,
   Get,
   Post,
-  Put,
   Delete,
   Body,
   Param,
   UseGuards,
+  Put,
 } from '@nestjs/common';
 import { SurveyService } from './survey.service';
 import { CreateSurveyDto } from './dto/create-survey.dto';
-import { UpdateSurveyDto } from './dto/update-survey.dto';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -24,6 +23,7 @@ import { JwtGuard } from 'src/auth/jwt.guard';
 import { RolesGuard } from 'src/auth/role.guard';
 import { Roles } from 'src/auth/role.decorator';
 import { RoleEnum } from 'src/role/enum/role.enum';
+import { UpdateSurveyDto } from './dto/update-survey.dto';
 
 @ApiTags('Survey')
 @Controller('surveys')
@@ -74,7 +74,7 @@ export class SurveyController {
   }
 
   @ApiOperation({
-    summary: 'Update a survey by ID (Admin only)',
+    summary: 'Update a Survey by ID (Admin only)',
   })
   @ApiOkResponse({
     description: 'Survey has been successfully updated',

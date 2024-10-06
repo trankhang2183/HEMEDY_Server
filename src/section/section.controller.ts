@@ -47,18 +47,6 @@ export class SectionController {
   }
 
   @ApiOperation({
-    summary: 'Get all sections',
-  })
-  @ApiOkResponse({
-    description: 'Successfully retrieved all sections',
-    type: [Section],
-  })
-  @Get()
-  getAllSections(): Promise<Section[]> {
-    return this.sectionService.getAllSections();
-  }
-
-  @ApiOperation({
     summary: 'Get a section by ID',
   })
   @ApiOkResponse({

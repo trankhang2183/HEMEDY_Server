@@ -19,6 +19,7 @@ import { TransactionService } from './transaction.service';
 import { AddFundTransactionDto } from './dto/add-funds-transaction.dto';
 import { PayProductTransactionDto } from './dto/pay-product-transaction.dto';
 import { Transaction } from './entities/transaction.entity';
+import { PayProductStripeTransactionDto } from './dto/pay-product-stripe-transaction.dto';
 
 @ApiTags('Transaction')
 @Controller('transaction')
@@ -33,6 +34,50 @@ export class TransactionController {
   @Get('all-courses')
   getAllCoursesOfUser(@GetUser() user: any): Promise<Transaction[]> {
     return this.transactionService.getAllCoursesOfUser(user);
+  }
+
+  @ApiOperation({ summary: 'Add Funds By MoMo' })
+  @Roles(RoleEnum.CUSTOMER)
+  @UseGuards(RolesGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtGuard)
+  @Post('/stripe/addFunds')
+  addFundsByStripe(
+    @Body() addFundTransactionDto: AddFundTransactionDto,
+    @GetUser() user: any,
+  ): Promise<string> {
+    return this.transactionService.addFundsByStripe(
+      addFundTransactionDto,
+      user,
+    );
+  }
+
+  @ApiOperation({ summary: 'Add Funds By MoMo' })
+  @Roles(RoleEnum.CUSTOMER)
+  @UseGuards(RolesGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtGuard)
+  @Post('/stripe/payProduct')
+  payProductByStripe(
+    @Body() payProductStripeTransactionDto: PayProductStripeTransactionDto,
+    @GetUser() user: any,
+  ): Promise<string> {
+    return this.transactionService.payProductByStripe(
+      payProductStripeTransactionDto,
+      user,
+    );
+  }
+
+  @ApiOperation({ summary: 'Stripe Payment Callback' })
+  @Get('/stripe/paymentCallback')
+  async paymentStripeCallback(
+    @Req() request: Request,
+    @Res() response: Response,
+  ): Promise<any> {
+    const result = await this.transactionService.paymentStripeCallback(
+      request.query,
+    );
+    response.redirect(result.redirectUrl);
   }
 
   @ApiOperation({ summary: 'Add Funds By MoMo' })
@@ -69,12 +114,11 @@ export class TransactionController {
   async paymentMoMoCallback(
     @Req() request: Request,
     @Res() response: Response,
-  ): Promise<Transaction> {
+  ): Promise<any> {
     const result = await this.transactionService.paymentMoMoCallback(
       request.query,
     );
-    return result;
-    // response.redirect(result.redirectUrl);
+    response.redirect(result.redirectUrl);
   }
 
   @ApiOperation({ summary: 'Add Funds By VnPay' })
@@ -118,11 +162,10 @@ export class TransactionController {
   async paymentVnPayCallback(
     @Req() request: Request,
     @Res() response: Response,
-  ): Promise<Transaction> {
+  ): Promise<any> {
     const result = await this.transactionService.paymentVnPayCallback(
       request.query,
     );
-    return result;
-    // response.redirect(result.redirectUrl);
+    response.redirect(result.redirectUrl);
   }
 }

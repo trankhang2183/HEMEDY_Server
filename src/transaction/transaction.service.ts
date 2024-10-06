@@ -14,9 +14,13 @@ import { Transaction } from './entities/transaction.entity';
 import { PaymentTypeEnum } from './enum/paymen-type.enum';
 import { TransactionStatusEnum } from './enum/transaction-status.enum';
 import { TransactionTypeEnum } from './enum/transaction-type.enum';
+import Stripe from 'stripe';
+import { PayProductStripeTransactionDto } from './dto/pay-product-stripe-transaction.dto';
 
 @Injectable()
 export class TransactionService {
+  private readonly stripe: Stripe;
+
   constructor(
     private readonly configService: ConfigService,
 
@@ -25,23 +29,147 @@ export class TransactionService {
 
     @InjectModel(Transaction.name)
     private readonly transactionModel: Model<Transaction>,
-  ) {}
+  ) {
+    this.stripe = new Stripe(
+      this.configService.get<string>('STRIPE_SECRET_KEY'),
+    );
+  }
+
+  async addFundsByStripe(
+    addFundTransactionDto: AddFundTransactionDto,
+    user: any,
+  ): Promise<string> {
+    //Create Stripe checkout session
+    try {
+      const session = await this.stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'vnd',
+              product_data: {
+                name: 'Nạp tiền vào tài khoản',
+              },
+              unit_amount: addFundTransactionDto.amount,
+            },
+            quantity: 1,
+          },
+        ],
+        metadata: {
+          order_id: `${user._id}-${TransactionTypeEnum.ADD_FUNDS}-${new Date()
+            .getTime()
+            .toString()}`,
+        },
+        mode: 'payment',
+        expires_at: Math.floor(Date.now() / 1000) + 60 * 30, // Hết hạn sau 30 phút
+        customer_email: user.email,
+        success_url: `${this.configService.get(
+          'ReturnStripePaymentUrl',
+        )}?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${this.configService.get(
+          'ReturnStripePaymentUrl',
+        )}/cancel`,
+      });
+      console.log(session);
+      // Trả về URL để chuyển hướng khách hàng tới trang thanh toán
+      return session.url;
+    } catch (error) {
+      console.error('Error creating Stripe Checkout session:', error.message);
+      throw new Error('Could not create Stripe Checkout session');
+    }
+  }
+
+  async payProductByStripe(
+    payProductTransactionDto: PayProductStripeTransactionDto,
+    user: any,
+  ): Promise<string> {
+    // Create Stripe checkout session
+    try {
+      const session = await this.stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'vnd',
+              product_data: {
+                name: `Thanh toán Khóa học: ${payProductTransactionDto.name}`,
+                images: [payProductTransactionDto.image],
+                description: `${payProductTransactionDto.description}`,
+              },
+              unit_amount: payProductTransactionDto.amount,
+            },
+            quantity: 1,
+          },
+        ],
+        metadata: {
+          order_id: `${user._id}-${TransactionTypeEnum.PAY}-${
+            payProductTransactionDto.product_type
+          }-${new Date().getTime().toString()}`,
+        },
+        mode: 'payment',
+        expires_at: Math.floor(Date.now() / 1000) + 60 * 30, // Hết hạn sau 30 phút
+        customer_email: user.email,
+        success_url: `${this.configService.get(
+          'ReturnStripePaymentUrl',
+        )}?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${this.configService.get(
+          'ReturnStripePaymentUrl',
+        )}/cancel`,
+      });
+      console.log(session);
+      // Trả về URL để chuyển hướng khách hàng tới trang thanh toán
+      return session.url;
+    } catch (error) {
+      console.error('Error creating Stripe Checkout session:', error.message);
+      throw new Error('Could not create Stripe Checkout session');
+    }
+  }
+
+  async paymentStripeCallback(data: any): Promise<any> {
+    const result = await this.stripe.checkout.sessions.retrieve(
+      data.session_id,
+    );
+    const user_id = result.metadata.order_id.split('-')[0];
+    const transaction_type = result.metadata.order_id.split('-')[1];
+    const amount = result.amount_total;
+
+    let transaction = null;
+    if (transaction_type === TransactionTypeEnum.ADD_FUNDS) {
+      //create transaction
+      transaction = new this.transactionModel({
+        user_id,
+        payment_type: PaymentTypeEnum.STRIPE,
+        amount,
+        status: TransactionStatusEnum.SUCCESS,
+        transaction_type,
+      });
+      await transaction.save();
+
+      const user = await this.userModel.findById(transaction.user_id);
+      user.account_balance += amount;
+      await user.save();
+    } else {
+      const product_type = result.metadata.order_id.split('-')[2];
+      transaction = new this.transactionModel({
+        user_id,
+        payment_type: PaymentTypeEnum.STRIPE,
+        amount,
+        status: TransactionStatusEnum.SUCCESS,
+        transaction_type,
+        product_type,
+      });
+      await transaction.save();
+    }
+
+    return {
+      redirectUrl: `https://hemedy.vercel.app/`,
+    };
+  }
 
   async addFundsByMoMo(
     addFundTransactionDto: AddFundTransactionDto,
     user: any,
   ): Promise<string> {
-    //create transaction
-    const transaction = new this.transactionModel({
-      user_id: user._id,
-      payment_type: PaymentTypeEnum.MOMO,
-      amount: addFundTransactionDto.amount,
-      status: TransactionStatusEnum.WAITING,
-      transaction_type: TransactionTypeEnum.ADD_FUNDS,
-    });
-
-    await transaction.save();
-
     // create momo url
     const partnerCode: string = this.configService.get('PartnerCode');
     const accessKey: string = this.configService.get('AccessKey');
@@ -49,9 +177,9 @@ export class TransactionService {
     const MoMoApiUrl: string = this.configService.get('MoMoApiUrl');
     const ipnUrl = this.configService.get('ReturnMoMoPaymentUrl');
     const redirectUrl = this.configService.get('ReturnMoMoPaymentUrl');
-    const orderId = `${transaction._id}-${
-      TransactionTypeEnum.ADD_FUNDS
-    }-${new Date().getTime().toString()}`;
+    const orderId = `${user._id}-${TransactionTypeEnum.ADD_FUNDS}-${new Date()
+      .getTime()
+      .toString()}`;
     const requestId = orderId;
     const orderInfo = `Nạp tiền vào tài khoản`;
     const requestType = 'captureWallet';
@@ -114,18 +242,6 @@ export class TransactionService {
     payProductTransactionDto: PayProductTransactionDto,
     user: any,
   ): Promise<string> {
-    //create transaction
-    const transaction = new this.transactionModel({
-      user_id: user._id,
-      payment_type: PaymentTypeEnum.MOMO,
-      amount: payProductTransactionDto.amount,
-      status: TransactionStatusEnum.WAITING,
-      transaction_type: TransactionTypeEnum.PAY,
-      product_type: payProductTransactionDto.product_type,
-    });
-
-    await transaction.save();
-
     // create momo url
     const partnerCode: string = this.configService.get('PartnerCode');
     const accessKey: string = this.configService.get('AccessKey');
@@ -133,8 +249,8 @@ export class TransactionService {
     const MoMoApiUrl: string = this.configService.get('MoMoApiUrl');
     const ipnUrl = this.configService.get('ReturnMoMoPaymentUrl');
     const redirectUrl = this.configService.get('ReturnMoMoPaymentUrl');
-    const orderId = `${transaction._id}-${
-      TransactionTypeEnum.ADD_FUNDS
+    const orderId = `${user._id}-${TransactionTypeEnum.PAY}-${
+      payProductTransactionDto.product_type
     }-${new Date().getTime().toString()}`;
     const requestId = orderId;
     const orderInfo = `Thanh toán sản phẩm`;
@@ -194,23 +310,42 @@ export class TransactionService {
     }
   }
 
-  async paymentMoMoCallback(data: any): Promise<Transaction> {
-    const transaction_id: number = data.orderId.split('-')[0];
+  async paymentMoMoCallback(data: any): Promise<any> {
+    const user_id: number = data.orderId.split('-')[0];
     const transaction_type = data.orderId.split('-')[1];
-    const transaction = await this.transactionModel.findById(transaction_id);
-    transaction.status = TransactionStatusEnum.SUCCESS;
-    await transaction.save();
+    const amount = Number.parseInt(data.amount);
 
+    let transaction = null;
     if (transaction_type === TransactionTypeEnum.ADD_FUNDS) {
+      //create transaction
+      transaction = new this.transactionModel({
+        user_id,
+        payment_type: PaymentTypeEnum.MOMO,
+        amount,
+        status: TransactionStatusEnum.SUCCESS,
+        transaction_type,
+      });
+      await transaction.save();
+
       const user = await this.userModel.findById(transaction.user_id);
-      user.account_balance += Number.parseInt(data.amount);
+      user.account_balance += amount;
       await user.save();
+    } else {
+      const product_type = data.orderId.split('-')[2];
+      transaction = new this.transactionModel({
+        user_id,
+        payment_type: PaymentTypeEnum.MOMO,
+        amount,
+        status: TransactionStatusEnum.SUCCESS,
+        transaction_type,
+        product_type,
+      });
+      await transaction.save();
     }
 
-    return transaction;
-    // return {
-    //   redirectUrl: `http://local-culture-projects.onrender.com/project/view`,
-    // };
+    return {
+      redirectUrl: `https://hemedy.vercel.app/`,
+    };
   }
 
   async addFundsByVNPay(
@@ -218,17 +353,6 @@ export class TransactionService {
     user: any,
     req: Request,
   ): Promise<string> {
-    //create transaction
-    const transaction = new this.transactionModel({
-      user_id: user._id,
-      payment_type: PaymentTypeEnum.MOMO,
-      amount: addFundTransactionDto.amount,
-      status: TransactionStatusEnum.WAITING,
-      transaction_type: TransactionTypeEnum.ADD_FUNDS,
-    });
-
-    await transaction.save();
-
     // create vnpay url
     const ipAddr = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
@@ -244,9 +368,9 @@ export class TransactionService {
     const amount = addFundTransactionDto.amount;
     const bankCode = '';
 
-    const orderInfo = `${transaction._id}-${
-      TransactionTypeEnum.ADD_FUNDS
-    }-${new Date().getTime().toString()}`;
+    const orderInfo = `${user._id}-${TransactionTypeEnum.ADD_FUNDS}-${new Date()
+      .getTime()
+      .toString()}`;
     const orderType = orderInfo;
     const locale = 'vn';
 
@@ -284,18 +408,6 @@ export class TransactionService {
     user: any,
     req: Request,
   ): Promise<string> {
-    //create transaction
-    const transaction = new this.transactionModel({
-      user_id: user._id,
-      payment_type: PaymentTypeEnum.MOMO,
-      amount: payProductTransactionDto.amount,
-      status: TransactionStatusEnum.WAITING,
-      transaction_type: TransactionTypeEnum.PAY,
-      product_type: payProductTransactionDto.product_type,
-    });
-
-    await transaction.save();
-
     // create vnpay url
     const ipAddr = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
@@ -311,8 +423,8 @@ export class TransactionService {
     const amount = payProductTransactionDto.amount;
     const bankCode = '';
 
-    const orderInfo = `${transaction._id}-${
-      TransactionTypeEnum.ADD_FUNDS
+    const orderInfo = `${user._id}-${TransactionTypeEnum.PAY}-${
+      payProductTransactionDto.product_type
     }-${new Date().getTime().toString()}`;
     const orderType = orderInfo;
     const locale = 'vn';
@@ -346,7 +458,7 @@ export class TransactionService {
     return vnpUrl;
   }
 
-  async paymentVnPayCallback(data: any): Promise<Transaction> {
+  async paymentVnPayCallback(data: any): Promise<any> {
     let vnp_Params = data;
     const secureHash = vnp_Params['vnp_SecureHash'];
 
@@ -362,23 +474,41 @@ export class TransactionService {
     const signed = hmac.update(new Buffer(signData, 'utf-8')).digest('hex');
 
     if (secureHash === signed && vnp_Params['vnp_ResponseCode'] === '00') {
-      const transaction_id: number = vnp_Params['vnp_OrderInfo'].split('-')[0];
-
+      const user_id: number = vnp_Params['vnp_OrderInfo'].split('-')[0];
       const transaction_type = vnp_Params['vnp_OrderInfo'].split('-')[1];
-      const transaction = await this.transactionModel.findById(transaction_id);
-      transaction.status = TransactionStatusEnum.SUCCESS;
-      await transaction.save();
+      const amount = vnp_Params['vnp_Amount'];
 
+      let transaction = null;
       if (transaction_type === TransactionTypeEnum.ADD_FUNDS) {
-        const user = await this.userModel.findById(transaction.user_id);
-        user.account_balance += transaction.amount;
+        //create transaction
+        transaction = new this.transactionModel({
+          user_id,
+          payment_type: PaymentTypeEnum.VNPAY,
+          amount,
+          status: TransactionStatusEnum.SUCCESS,
+          transaction_type,
+        });
+        await transaction.save();
+
+        const user = await this.userModel.findById(user_id);
+        user.account_balance += amount;
         await user.save();
+      } else {
+        const product_type = vnp_Params['vnp_OrderInfo'].split('-')[2];
+        transaction = new this.transactionModel({
+          user_id,
+          payment_type: PaymentTypeEnum.VNPAY,
+          amount,
+          status: TransactionStatusEnum.SUCCESS,
+          transaction_type,
+          product_type,
+        });
+        await transaction.save();
       }
 
-      return transaction;
-      // return {
-      //   redirectUrl: `http://local-culture-projects.onrender.com/project/view`,
-      // };
+      return {
+        redirectUrl: `https://hemedy.vercel.app/`,
+      };
     } else {
       throw new InternalServerErrorException(
         'Có lỗi xảy ra khi thanh toán với VNPay',

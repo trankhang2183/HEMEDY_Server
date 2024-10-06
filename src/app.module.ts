@@ -22,6 +22,8 @@ import { SectionModule } from './section/section.module';
 import { QuestionModule } from './question/question.module';
 import { AnswerModule } from './answer/answer.module';
 import { DoctorScheduleModule } from './doctor-schedule/doctor-schedule.module';
+import { ResultModule } from './result/result.module';
+import { ConfigResultModule } from './config_result/config_result.module';
 
 @Module({
   imports: [
@@ -70,6 +72,8 @@ import { DoctorScheduleModule } from './doctor-schedule/doctor-schedule.module';
     QuestionModule,
     AnswerModule,
     DoctorScheduleModule,
+    ResultModule,
+    ConfigResultModule,
   ],
   providers: [SocketGateway],
 })

@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsNotEmpty, IsString, IsUrl } from 'class-validator';
 import { PodcastTypeEnum } from '../enum/podcast-type.enum';
+import { PodcastCategoryEnum } from '../enum/podcast-category.enum';
 
 export class CreatePodcastDto {
   @ApiProperty({
@@ -44,4 +45,12 @@ export class CreatePodcastDto {
   @IsEnum(PodcastTypeEnum)
   @IsNotEmpty()
   type: PodcastTypeEnum;
+
+  @ApiProperty({
+    description: 'Category of the podcast',
+    example: PodcastCategoryEnum.PODCAST,
+  })
+  @IsEnum(PodcastCategoryEnum)
+  @IsNotEmpty()
+  category: PodcastCategoryEnum;
 }

@@ -1,6 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { ApiProperty } from '@nestjs/swagger';
 import mongoose from 'mongoose';
+import { PodcastTypeEnum } from '../enum/podcast-type.enum';
+import { PodcastCategoryEnum } from '../enum/podcast-category.enum';
 
 export type PodcastDocument = mongoose.HydratedDocument<Podcast>;
 
@@ -38,10 +40,17 @@ export class Podcast {
 
   @ApiProperty({
     description: 'Type of the podcast (e.g., Technology, Education)',
-    example: 'Technology',
+    example: PodcastTypeEnum.NEW,
   })
   @Prop()
   type: string;
+
+  @ApiProperty({
+    description: 'Category of the podcast (e.g., Technology, Education)',
+    example: PodcastCategoryEnum.PODCAST,
+  })
+  @Prop()
+  category: string;
 
   @ApiProperty({
     description: 'Number of listens',

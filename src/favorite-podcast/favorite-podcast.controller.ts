@@ -10,8 +10,13 @@ import {
 import { JwtGuard } from 'src/auth/jwt.guard';
 import { GetUser } from 'src/auth/get-user.decorator';
 import { FavoritePodcast } from './entities/favorite-podcast.entity';
+import { Roles } from 'src/auth/role.decorator';
+import { RoleEnum } from 'src/role/enum/role.enum';
+import { RolesGuard } from 'src/auth/role.guard';
 
 @ApiTags('Favorite Podcast')
+@Roles(RoleEnum.CUSTOMER)
+@UseGuards(RolesGuard)
 @ApiBearerAuth()
 @UseGuards(JwtGuard)
 @Controller('favorite-podcast')
