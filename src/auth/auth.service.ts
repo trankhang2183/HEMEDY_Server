@@ -17,7 +17,6 @@ import { jwtDecode } from 'jwt-decode';
 import { RoleEnum } from 'src/role/enum/role.enum';
 import { UserService } from 'src/user/user.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { EmailService } from 'src/email/email.service';
 import { UpRoleAccountDto } from './dto/upRole-account.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -34,8 +33,6 @@ export class AuthService {
     private readonly jwtService: JwtService,
 
     private readonly userService: UserService,
-
-    private readonly emailService: EmailService,
   ) {}
 
   async loginGoogleCustomer(token: string): Promise<{ accessToken: string }> {

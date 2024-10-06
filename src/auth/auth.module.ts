@@ -7,12 +7,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
 import { Role, RoleSchema } from 'src/role/entities/role.entity';
 import { UserService } from 'src/user/user.service';
-import { EmailService } from 'src/email/email.service';
-import { NotificationService } from 'src/notification/notification.service';
-import {
-  Notification,
-  NotificationSchema,
-} from 'src/notification/entities/notification.entity';
 import { RoleService } from 'src/role/role.service';
 import { MongooseModule } from '@nestjs/mongoose';
 
@@ -22,7 +16,6 @@ import { MongooseModule } from '@nestjs/mongoose';
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: Role.name, schema: RoleSchema },
-      { name: Notification.name, schema: NotificationSchema },
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -36,13 +29,6 @@ import { MongooseModule } from '@nestjs/mongoose';
     }),
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    JwtStrategy,
-    UserService,
-    EmailService,
-    NotificationService,
-    RoleService,
-  ],
+  providers: [AuthService, JwtStrategy, UserService, RoleService],
 })
 export class AuthModule {}

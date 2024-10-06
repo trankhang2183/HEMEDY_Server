@@ -28,17 +28,12 @@ import { JwtGuard } from './jwt.guard';
 import { RolesGuard } from './role.guard';
 import { Roles } from './role.decorator';
 import { RoleEnum } from 'src/role/enum/role.enum';
-import { EmailService } from 'src/email/email.service';
 import { UpRoleAccountDto } from './dto/upRole-account.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-
-    private readonly emailService: EmailService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   @ApiOperation({ summary: 'Sign In with Google to get Access Token' })
   @ApiOkResponse({
