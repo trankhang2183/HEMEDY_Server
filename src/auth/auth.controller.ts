@@ -35,7 +35,9 @@ import { UpRoleAccountDto } from './dto/upRole-account.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @ApiOperation({ summary: 'Sign In with Google to get Access Token' })
+  @ApiOperation({
+    summary: 'Sign In with Google to get Access Token For Customer',
+  })
   @ApiOkResponse({
     description: 'Access token response',
     schema: {
@@ -50,11 +52,35 @@ export class AuthController {
   @ApiInternalServerErrorResponse({
     description: 'Something went wrong when creating user.',
   })
-  @Post('/google/login')
-  async googleLogin(
+  @Post('/google/login/customer')
+  async loginGoogleCustomer(
     @Body() googleTokenDto: GoogleTokenDto,
   ): Promise<{ accessToken: string }> {
     return this.authService.loginGoogleCustomer(googleTokenDto.token);
+  }
+
+  @ApiOperation({
+    summary: 'Sign In with Google to get Access Token For Doctor and Admin',
+  })
+  @ApiOkResponse({
+    description: 'Access token response',
+    schema: {
+      properties: {
+        access_token: {
+          example:
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmdWxsTmFtZSI6Ikh1eW5oIER1b25nIiwiZW1haWwiOiJ0cnVuZ2R1b25nMTIyMDI2MTlAZ21haWwuY29tIiwicm9sZSI6IkN1c3RvbWVyIiwiaWF0IjoxNjg5MjM3MjgyLCJleHAiOjE2ODkyNDA4ODJ9.dkUbqCSL5lPEwGvlAJS7cXVXuFiduWNELjXuQZtvShY',
+        },
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Something went wrong when creating user.',
+  })
+  @Post('/google/login/doctor-admin')
+  async loginGoogleDocAndAdmin(
+    @Body() googleTokenDto: GoogleTokenDto,
+  ): Promise<{ accessToken: string }> {
+    return this.authService.loginGoogleDocAndAdmin(googleTokenDto.token);
   }
 
   @ApiOperation({ summary: 'Sign Up new User' })

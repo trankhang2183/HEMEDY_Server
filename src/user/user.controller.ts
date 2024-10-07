@@ -22,7 +22,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @ApiOperation({ summary: 'Get Users with Pagination' })
+  @ApiOperation({ summary: 'Get Users' })
   @ApiOkResponse({
     description: 'The user has been successfully retrieved.',
     type: [User],
@@ -40,6 +40,22 @@ export class UserController {
   @Get()
   getAllUsers(): Promise<[{ totalUsers: number }, User[]]> {
     return this.userService.getUsers();
+  }
+
+  @ApiOperation({ summary: 'Get Doctors' })
+  @ApiOkResponse({
+    description: 'The user has been successfully retrieved.',
+    type: [User],
+  })
+  @ApiNotFoundResponse({
+    description: 'Have no User in the repository.',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Internal server error.',
+  })
+  @Get('all/doctors')
+  getAllDoctors(): Promise<[{ totalUsers: number }, User[]]> {
+    return this.userService.getAllDoctors();
   }
 
   @ApiOperation({ summary: 'Get a user by email' })

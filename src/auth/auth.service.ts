@@ -38,13 +38,12 @@ export class AuthService {
   async loginGoogleCustomer(token: string): Promise<{ accessToken: string }> {
     const googlePayload: any = jwtDecode(token);
     try {
-      const user = await this.userRepository.findOne({
-        where: {
+      const user = await this.userRepository
+        .findOne({
           email: googlePayload.email,
           role_name: RoleEnum.CUSTOMER,
-        },
-        relations: ['role'],
-      });
+        })
+        .populate('role');
       if (user) {
         if (user.is_ban) {
           throw new BadRequestException(

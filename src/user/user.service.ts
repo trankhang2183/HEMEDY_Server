@@ -53,6 +53,25 @@ export class UserService {
     }
   }
 
+  async getAllDoctors(): Promise<[{ totalUsers: number }, User[]]> {
+    try {
+      const users = await this.userModel
+        .find({ role_name: RoleEnum.DOCTOR })
+        .populate('role')
+        .exec();
+
+      if (!users || users.length === 0) {
+        return [{ totalUsers: 0 }, []];
+      }
+
+      const totalUsers = users.length;
+
+      return [{ totalUsers }, users];
+    } catch (error) {
+      throw new NotFoundException(error.message);
+    }
+  }
+
   async getUserByEmail(email: string): Promise<User> {
     try {
       const user = await this.userModel
