@@ -68,7 +68,7 @@ export class TransactionService {
         )}?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${this.configService.get(
           'ReturnStripePaymentUrl',
-        )}/cancel`,
+        )}?session_id={CHECKOUT_SESSION_ID}`,
       });
       console.log(session);
       // Trả về URL để chuyển hướng khách hàng tới trang thanh toán
@@ -114,7 +114,7 @@ export class TransactionService {
         )}?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${this.configService.get(
           'ReturnStripePaymentUrl',
-        )}/cancel`,
+        )}?session_id={CHECKOUT_SESSION_ID}`,
       });
       console.log(session);
       // Trả về URL để chuyển hướng khách hàng tới trang thanh toán
@@ -132,6 +132,35 @@ export class TransactionService {
     const user_id = result.metadata.order_id.split('-')[0];
     const transaction_type = result.metadata.order_id.split('-')[1];
     const amount = result.amount_total;
+
+    if (result.payment_status === 'unpaid') {
+      let transaction = null;
+      if (transaction_type === TransactionTypeEnum.ADD_FUNDS) {
+        transaction = new this.transactionModel({
+          user_id,
+          payment_type: PaymentTypeEnum.STRIPE,
+          amount,
+          status: TransactionStatusEnum.FAILURE,
+          transaction_type,
+        });
+        await transaction.save();
+      } else {
+        const product_type = result.metadata.order_id.split('-')[2];
+        transaction = new this.transactionModel({
+          user_id,
+          payment_type: PaymentTypeEnum.STRIPE,
+          amount,
+          status: TransactionStatusEnum.FAILURE,
+          transaction_type,
+          product_type,
+        });
+        await transaction.save();
+      }
+
+      return {
+        redirectUrl: `https://hemedy.vercel.app/`,
+      };
+    }
 
     let transaction = null;
     if (transaction_type === TransactionTypeEnum.ADD_FUNDS) {
@@ -316,9 +345,10 @@ export class TransactionService {
     const amount = Number.parseInt(data.amount);
 
     if (data.message === 'Giao dịch bị từ chối bởi người dùng.') {
+      let transaction = null;
       if (transaction_type === TransactionTypeEnum.ADD_FUNDS) {
         //create transaction
-        const transaction = new this.transactionModel({
+        transaction = new this.transactionModel({
           user_id,
           payment_type: PaymentTypeEnum.MOMO,
           amount,
@@ -328,7 +358,7 @@ export class TransactionService {
         await transaction.save();
       } else {
         const product_type = data.orderId.split('-')[2];
-        const transaction = new this.transactionModel({
+        transaction = new this.transactionModel({
           user_id,
           payment_type: PaymentTypeEnum.MOMO,
           amount,
@@ -502,11 +532,11 @@ export class TransactionService {
     const hmac = crypto.createHmac('sha512', secretKey);
     const signed = hmac.update(new Buffer(signData, 'utf-8')).digest('hex');
 
-    if (secureHash === signed && vnp_Params['vnp_ResponseCode'] === '00') {
-      const user_id: number = vnp_Params['vnp_OrderInfo'].split('-')[0];
-      const transaction_type = vnp_Params['vnp_OrderInfo'].split('-')[1];
-      const amount = vnp_Params['vnp_Amount'];
+    const user_id: number = vnp_Params['vnp_OrderInfo'].split('-')[0];
+    const transaction_type = vnp_Params['vnp_OrderInfo'].split('-')[1];
+    const amount = vnp_Params['vnp_Amount'];
 
+    if (secureHash === signed && vnp_Params['vnp_ResponseCode'] === '00') {
       let transaction = null;
       if (transaction_type === TransactionTypeEnum.ADD_FUNDS) {
         //create transaction
@@ -539,9 +569,33 @@ export class TransactionService {
         redirectUrl: `https://hemedy.vercel.app/`,
       };
     } else {
-      throw new InternalServerErrorException(
-        'Có lỗi xảy ra khi thanh toán với VNPay',
-      );
+      let transaction = null;
+      if (transaction_type === TransactionTypeEnum.ADD_FUNDS) {
+        //create transaction
+        transaction = new this.transactionModel({
+          user_id,
+          payment_type: PaymentTypeEnum.VNPAY,
+          amount,
+          status: TransactionStatusEnum.FAILURE,
+          transaction_type,
+        });
+        await transaction.save();
+      } else {
+        const product_type = vnp_Params['vnp_OrderInfo'].split('-')[2];
+        transaction = new this.transactionModel({
+          user_id,
+          payment_type: PaymentTypeEnum.VNPAY,
+          amount,
+          status: TransactionStatusEnum.FAILURE,
+          transaction_type,
+          product_type,
+        });
+        await transaction.save();
+      }
+
+      return {
+        redirectUrl: `https://hemedy.vercel.app/`,
+      };
     }
   }
 
@@ -549,6 +603,18 @@ export class TransactionService {
     const transactions = await this.transactionModel.find({
       user_id: user._id,
       transaction_type: TransactionTypeEnum.PAY,
+    });
+    if (!transactions) {
+      throw new InternalServerErrorException(
+        'Something went wrong when getting all courses',
+      );
+    }
+    return transactions;
+  }
+
+  async getAllTransactionOfUser(user: any): Promise<Transaction[]> {
+    const transactions = await this.transactionModel.find({
+      user_id: user._id,
     });
     if (!transactions) {
       throw new InternalServerErrorException(

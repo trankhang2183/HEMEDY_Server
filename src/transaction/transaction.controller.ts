@@ -26,6 +26,16 @@ import { PayProductStripeTransactionDto } from './dto/pay-product-stripe-transac
 export class TransactionController {
   constructor(private readonly transactionService: TransactionService) {}
 
+  @ApiOperation({ summary: 'Get all transaction of user' })
+  @Roles(RoleEnum.CUSTOMER)
+  @UseGuards(RolesGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtGuard)
+  @Get()
+  getAllTransactionOfUser(@GetUser() user: any): Promise<Transaction[]> {
+    return this.transactionService.getAllTransactionOfUser(user);
+  }
+
   @ApiOperation({ summary: 'Get all courses of user' })
   @Roles(RoleEnum.CUSTOMER)
   @UseGuards(RolesGuard)
@@ -36,7 +46,7 @@ export class TransactionController {
     return this.transactionService.getAllCoursesOfUser(user);
   }
 
-  @ApiOperation({ summary: 'Add Funds By MoMo' })
+  @ApiOperation({ summary: 'Add Funds By Stripe' })
   @Roles(RoleEnum.CUSTOMER)
   @UseGuards(RolesGuard)
   @ApiBearerAuth()
@@ -52,7 +62,7 @@ export class TransactionController {
     );
   }
 
-  @ApiOperation({ summary: 'Add Funds By MoMo' })
+  @ApiOperation({ summary: 'Pay Product By Stripe' })
   @Roles(RoleEnum.CUSTOMER)
   @UseGuards(RolesGuard)
   @ApiBearerAuth()
