@@ -315,6 +315,35 @@ export class TransactionService {
     const transaction_type = data.orderId.split('-')[1];
     const amount = Number.parseInt(data.amount);
 
+    if (data.message === 'Giao dịch bị từ chối bởi người dùng.') {
+      if (transaction_type === TransactionTypeEnum.ADD_FUNDS) {
+        //create transaction
+        const transaction = new this.transactionModel({
+          user_id,
+          payment_type: PaymentTypeEnum.MOMO,
+          amount,
+          status: TransactionStatusEnum.FAILURE,
+          transaction_type,
+        });
+        await transaction.save();
+      } else {
+        const product_type = data.orderId.split('-')[2];
+        const transaction = new this.transactionModel({
+          user_id,
+          payment_type: PaymentTypeEnum.MOMO,
+          amount,
+          status: TransactionStatusEnum.FAILURE,
+          transaction_type,
+          product_type,
+        });
+        await transaction.save();
+      }
+
+      return {
+        redirectUrl: `https://hemedy.vercel.app/`,
+      };
+    }
+
     let transaction = null;
     if (transaction_type === TransactionTypeEnum.ADD_FUNDS) {
       //create transaction
