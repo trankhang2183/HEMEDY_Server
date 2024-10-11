@@ -49,7 +49,7 @@ export class ConfigResultController {
     return this.configResultService.getAllConfigResult();
   }
 
-  @Get(':score')
+  @Get('score/:score')
   @ApiOperation({ summary: 'Get a config result by score' })
   @ApiResponse({ status: 200, description: 'The config result details.' })
   @ApiResponse({ status: 404, description: 'Config result not found.' })
@@ -57,7 +57,21 @@ export class ConfigResultController {
     return this.configResultService.getConfigResultByScore(score);
   }
 
-  @Patch(':score')
+  @Get('min-max-score/:min_score/:max_score')
+  @ApiOperation({ summary: 'Get a config result by score' })
+  @ApiResponse({ status: 200, description: 'The config result details.' })
+  @ApiResponse({ status: 404, description: 'Config result not found.' })
+  getConfigResultByMinMaxScore(
+    @Param('min_core') min_core: number,
+    @Param('max_score') max_score: number,
+  ) {
+    return this.configResultService.getConfigResultByMinMaxScore(
+      min_core,
+      max_score,
+    );
+  }
+
+  @Patch(':min_score/:max_score')
   @ApiOperation({ summary: 'Update a config result by score' })
   @ApiResponse({
     status: 200,
@@ -65,11 +79,13 @@ export class ConfigResultController {
   })
   @ApiResponse({ status: 404, description: 'Config result not found.' })
   updateConfigResultByScore(
-    @Param('score') score: number,
+    @Param('min_core') min_core: number,
+    @Param('max_score') max_score: number,
     @Body() updateConfigResultDto: UpdateConfigResultDto,
   ) {
     return this.configResultService.updateConfigResultByScore(
-      score,
+      min_core,
+      max_score,
       updateConfigResultDto,
     );
   }

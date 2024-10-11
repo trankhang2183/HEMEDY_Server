@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, IsNumber } from 'class-validator';
 
-export class PayProductTransactionDto {
+export class PayProductAccountBalanceTransactionDto {
   @ApiProperty({
     description: 'Transaction Amount',
     example: 500000,
@@ -9,14 +9,6 @@ export class PayProductTransactionDto {
   @IsNotEmpty()
   @IsNumber()
   amount: number;
-
-  @ApiProperty({
-    description: 'Product Name',
-    example: 'Subscription',
-  })
-  @IsNotEmpty()
-  @IsString()
-  name: string;
 
   @ApiProperty({
     description: 'Product Type',

@@ -1,3 +1,4 @@
+import { PayProductAccountBalanceTransactionDto } from './dto/pay-product-account-balance-transaction.dto';
 import {
   Body,
   Controller,
@@ -175,6 +176,25 @@ export class TransactionController {
   ): Promise<any> {
     const result = await this.transactionService.paymentVnPayCallback(
       request.query,
+    );
+    response.redirect(result.redirectUrl);
+  }
+
+  @ApiOperation({ summary: 'Pay Product By Account Balance' })
+  @Roles(RoleEnum.CUSTOMER)
+  @UseGuards(RolesGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtGuard)
+  @Post('/accountBalance/payProduct')
+  async payProductByAccountBalance(
+    @Body()
+    payProductAccountBalanceTransactionDto: PayProductAccountBalanceTransactionDto,
+    @Res() response: Response,
+    @GetUser() user: User,
+  ): Promise<any> {
+    const result = await this.transactionService.payProductByAccountBalance(
+      user,
+      payProductAccountBalanceTransactionDto,
     );
     response.redirect(result.redirectUrl);
   }

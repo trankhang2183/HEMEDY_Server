@@ -69,6 +69,22 @@ export class UserController {
   @ApiInternalServerErrorResponse({
     description: 'Internal server error.',
   })
+  @Get('doctor/:id')
+  getDoctorById(@Param('id') id: string): Promise<User> {
+    return this.userService.getDoctorById(id);
+  }
+
+  @ApiOperation({ summary: 'Get a user by email' })
+  @ApiOkResponse({
+    description: 'The user has been successfully retrieved.',
+    type: [User],
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found.',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Internal server error.',
+  })
   @ApiBearerAuth()
   @UseGuards(JwtGuard)
   @Get(':email')

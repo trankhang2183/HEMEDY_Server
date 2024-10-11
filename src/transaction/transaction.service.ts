@@ -1,6 +1,11 @@
+import { PayProductAccountBalanceTransactionDto } from './dto/pay-product-account-balance-transaction.dto';
 import { PayProductTransactionDto } from './dto/pay-product-transaction.dto';
 import { AddFundTransactionDto } from './dto/add-funds-transaction.dto';
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadGatewayException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import * as crypto from 'crypto';
@@ -56,9 +61,9 @@ export class TransactionService {
           },
         ],
         metadata: {
-          order_id: `${user._id}-${TransactionTypeEnum.ADD_FUNDS}-${new Date()
+          order_id: `${user._id}-${new Date()
             .getTime()
-            .toString()}`,
+            .toString()}2as4sad2-${new Date().getTime().toString()}`,
         },
         mode: 'payment',
         expires_at: Math.floor(Date.now() / 1000) + 60 * 30, // Hết hạn sau 30 phút
@@ -102,9 +107,9 @@ export class TransactionService {
           },
         ],
         metadata: {
-          order_id: `${user._id}-${TransactionTypeEnum.PAY}-${
-            payProductTransactionDto.product_type
-          }-${new Date().getTime().toString()}`,
+          order_id: `${user._id}-${new Date().getTime().toString()}-${new Date()
+            .getTime()
+            .toString()}-${payProductTransactionDto.product_type}`,
         },
         mode: 'payment',
         expires_at: Math.floor(Date.now() / 1000) + 60 * 30, // Hết hạn sau 30 phút
@@ -131,46 +136,50 @@ export class TransactionService {
     );
     const user_id = result.metadata.order_id.split('-')[0];
     const transaction_type = result.metadata.order_id.split('-')[1];
+    const current_time = result.metadata.order_id.split('-')[2];
     const amount = result.amount_total;
 
-    if (result.payment_status === 'unpaid') {
+    if (result.payment_status !== 'paid') {
       let transaction = null;
-      if (transaction_type === TransactionTypeEnum.ADD_FUNDS) {
+      if (transaction_type === `${current_time}2as4sad2`) {
         transaction = new this.transactionModel({
           user_id,
+          transaction_code: `${user_id}-${transaction_type}-${current_time}`,
           payment_type: PaymentTypeEnum.STRIPE,
           amount,
           status: TransactionStatusEnum.FAILURE,
-          transaction_type,
+          transaction_type: TransactionTypeEnum.ADD_FUNDS,
         });
         await transaction.save();
       } else {
-        const product_type = result.metadata.order_id.split('-')[2];
+        const product_type = result.metadata.order_id.split('-')[3];
         transaction = new this.transactionModel({
           user_id,
+          transaction_code: `${user_id}-${transaction_type}-${current_time}`,
           payment_type: PaymentTypeEnum.STRIPE,
           amount,
           status: TransactionStatusEnum.FAILURE,
-          transaction_type,
+          transaction_type: TransactionTypeEnum.PAY,
           product_type,
         });
         await transaction.save();
       }
 
       return {
-        redirectUrl: `https://hemedy.vercel.app/`,
+        redirectUrl: `https://hemedy.onrender.com/session`,
       };
     }
 
     let transaction = null;
-    if (transaction_type === TransactionTypeEnum.ADD_FUNDS) {
+    if (transaction_type === `${current_time}2as4sad2`) {
       //create transaction
       transaction = new this.transactionModel({
         user_id,
+        transaction_code: `${user_id}-${transaction_type}-${current_time}`,
         payment_type: PaymentTypeEnum.STRIPE,
         amount,
         status: TransactionStatusEnum.SUCCESS,
-        transaction_type,
+        transaction_type: TransactionTypeEnum.ADD_FUNDS,
       });
       await transaction.save();
 
@@ -178,20 +187,21 @@ export class TransactionService {
       user.account_balance += amount;
       await user.save();
     } else {
-      const product_type = result.metadata.order_id.split('-')[2];
+      const product_type = result.metadata.order_id.split('-')[3];
       transaction = new this.transactionModel({
         user_id,
+        transaction_code: `${user_id}-${transaction_type}-${current_time}`,
         payment_type: PaymentTypeEnum.STRIPE,
         amount,
         status: TransactionStatusEnum.SUCCESS,
-        transaction_type,
+        transaction_type: TransactionTypeEnum.PAY,
         product_type,
       });
       await transaction.save();
     }
 
     return {
-      redirectUrl: `https://hemedy.vercel.app/`,
+      redirectUrl: `https://hemedy.onrender.com/account`,
     };
   }
 
@@ -206,9 +216,9 @@ export class TransactionService {
     const MoMoApiUrl: string = this.configService.get('MoMoApiUrl');
     const ipnUrl = this.configService.get('ReturnMoMoPaymentUrl');
     const redirectUrl = this.configService.get('ReturnMoMoPaymentUrl');
-    const orderId = `${user._id}-${TransactionTypeEnum.ADD_FUNDS}-${new Date()
+    const orderId = `${user._id}-${new Date()
       .getTime()
-      .toString()}`;
+      .toString()}2as4sad2-${new Date().getTime().toString()}`;
     const requestId = orderId;
     const orderInfo = `Nạp tiền vào tài khoản`;
     const requestType = 'captureWallet';
@@ -278,11 +288,11 @@ export class TransactionService {
     const MoMoApiUrl: string = this.configService.get('MoMoApiUrl');
     const ipnUrl = this.configService.get('ReturnMoMoPaymentUrl');
     const redirectUrl = this.configService.get('ReturnMoMoPaymentUrl');
-    const orderId = `${user._id}-${TransactionTypeEnum.PAY}-${
-      payProductTransactionDto.product_type
-    }-${new Date().getTime().toString()}`;
+    const orderId = `${user._id}-${new Date().getTime().toString()}-${new Date()
+      .getTime()
+      .toString()}-${payProductTransactionDto.product_type}`;
     const requestId = orderId;
-    const orderInfo = `Thanh toán sản phẩm`;
+    const orderInfo = `Thanh toán sản phẩm: ${payProductTransactionDto.name}`;
     const requestType = 'captureWallet';
     const extraData = '';
     const orderGroupId = '';
@@ -342,47 +352,51 @@ export class TransactionService {
   async paymentMoMoCallback(data: any): Promise<any> {
     const user_id: number = data.orderId.split('-')[0];
     const transaction_type = data.orderId.split('-')[1];
+    const current_time = data.orderId.split('-')[2];
     const amount = Number.parseInt(data.amount);
 
-    if (data.message === 'Giao dịch bị từ chối bởi người dùng.') {
+    if (data.message !== 'Thành công.') {
       let transaction = null;
-      if (transaction_type === TransactionTypeEnum.ADD_FUNDS) {
+      if (transaction_type === `${current_time}2as4sad2`) {
         //create transaction
         transaction = new this.transactionModel({
           user_id,
+          transaction_code: `${user_id}-${transaction_type}-${current_time}`,
           payment_type: PaymentTypeEnum.MOMO,
           amount,
           status: TransactionStatusEnum.FAILURE,
-          transaction_type,
+          transaction_type: TransactionTypeEnum.ADD_FUNDS,
         });
         await transaction.save();
       } else {
-        const product_type = data.orderId.split('-')[2];
+        const product_type = data.orderId.split('-')[3];
         transaction = new this.transactionModel({
           user_id,
+          transaction_code: `${user_id}-${transaction_type}-${current_time}`,
           payment_type: PaymentTypeEnum.MOMO,
           amount,
           status: TransactionStatusEnum.FAILURE,
-          transaction_type,
+          transaction_type: TransactionTypeEnum.PAY,
           product_type,
         });
         await transaction.save();
       }
 
       return {
-        redirectUrl: `https://hemedy.vercel.app/`,
+        redirectUrl: `https://hemedy.onrender.com/session`,
       };
     }
 
     let transaction = null;
-    if (transaction_type === TransactionTypeEnum.ADD_FUNDS) {
+    if (transaction_type === `${current_time}2as4sad2`) {
       //create transaction
       transaction = new this.transactionModel({
         user_id,
+        transaction_code: `${user_id}-${transaction_type}-${current_time}`,
         payment_type: PaymentTypeEnum.MOMO,
         amount,
         status: TransactionStatusEnum.SUCCESS,
-        transaction_type,
+        transaction_type: TransactionTypeEnum.ADD_FUNDS,
       });
       await transaction.save();
 
@@ -390,20 +404,21 @@ export class TransactionService {
       user.account_balance += amount;
       await user.save();
     } else {
-      const product_type = data.orderId.split('-')[2];
+      const product_type = data.orderId.split('-')[3];
       transaction = new this.transactionModel({
         user_id,
+        transaction_code: `${user_id}-${transaction_type}-${current_time}`,
         payment_type: PaymentTypeEnum.MOMO,
         amount,
         status: TransactionStatusEnum.SUCCESS,
-        transaction_type,
+        transaction_type: TransactionTypeEnum.PAY,
         product_type,
       });
       await transaction.save();
     }
 
     return {
-      redirectUrl: `https://hemedy.vercel.app/`,
+      redirectUrl: `https://hemedy.onrender.com/account`,
     };
   }
 
@@ -427,9 +442,9 @@ export class TransactionService {
     const amount = addFundTransactionDto.amount;
     const bankCode = '';
 
-    const orderInfo = `${user._id}-${TransactionTypeEnum.ADD_FUNDS}-${new Date()
+    const orderInfo = `${user._id}-${new Date()
       .getTime()
-      .toString()}`;
+      .toString()}2as4sad2-${new Date().getTime().toString()}`;
     const orderType = orderInfo;
     const locale = 'vn';
 
@@ -482,9 +497,11 @@ export class TransactionService {
     const amount = payProductTransactionDto.amount;
     const bankCode = '';
 
-    const orderInfo = `${user._id}-${TransactionTypeEnum.PAY}-${
+    const orderInfo = `${user._id}-${new Date()
+      .getTime()
+      .toString()}-${new Date().getTime().toString()}-${
       payProductTransactionDto.product_type
-    }-${new Date().getTime().toString()}`;
+    }`;
     const orderType = orderInfo;
     const locale = 'vn';
 
@@ -534,18 +551,20 @@ export class TransactionService {
 
     const user_id: number = vnp_Params['vnp_OrderInfo'].split('-')[0];
     const transaction_type = vnp_Params['vnp_OrderInfo'].split('-')[1];
+    const current_time = vnp_Params['vnp_OrderInfo'].split('-')[2];
     const amount = vnp_Params['vnp_Amount'];
 
     if (secureHash === signed && vnp_Params['vnp_ResponseCode'] === '00') {
       let transaction = null;
-      if (transaction_type === TransactionTypeEnum.ADD_FUNDS) {
+      if (transaction_type === `${current_time}2as4sad2`) {
         //create transaction
         transaction = new this.transactionModel({
           user_id,
+          transaction_code: `${user_id}-${transaction_type}-${current_time}`,
           payment_type: PaymentTypeEnum.VNPAY,
           amount,
           status: TransactionStatusEnum.SUCCESS,
-          transaction_type,
+          transaction_type: TransactionTypeEnum.ADD_FUNDS,
         });
         await transaction.save();
 
@@ -553,50 +572,88 @@ export class TransactionService {
         user.account_balance += amount;
         await user.save();
       } else {
-        const product_type = vnp_Params['vnp_OrderInfo'].split('-')[2];
+        const product_type = vnp_Params['vnp_OrderInfo'].split('-')[3];
         transaction = new this.transactionModel({
           user_id,
+          transaction_code: `${user_id}-${transaction_type}-${current_time}`,
           payment_type: PaymentTypeEnum.VNPAY,
           amount,
           status: TransactionStatusEnum.SUCCESS,
-          transaction_type,
+          transaction_type: TransactionTypeEnum.PAY,
           product_type,
         });
         await transaction.save();
       }
 
       return {
-        redirectUrl: `https://hemedy.vercel.app/`,
+        redirectUrl: `https://hemedy.onrender.com/account`,
       };
     } else {
       let transaction = null;
-      if (transaction_type === TransactionTypeEnum.ADD_FUNDS) {
+      if (transaction_type === `${current_time}2as4sad2`) {
         //create transaction
         transaction = new this.transactionModel({
           user_id,
+          transaction_code: `${user_id}-${transaction_type}-${current_time}`,
           payment_type: PaymentTypeEnum.VNPAY,
           amount,
           status: TransactionStatusEnum.FAILURE,
-          transaction_type,
+          transaction_type: TransactionTypeEnum.ADD_FUNDS,
         });
         await transaction.save();
       } else {
-        const product_type = vnp_Params['vnp_OrderInfo'].split('-')[2];
+        const product_type = vnp_Params['vnp_OrderInfo'].split('-')[3];
         transaction = new this.transactionModel({
           user_id,
+          transaction_code: `${user_id}-${transaction_type}-${current_time}`,
           payment_type: PaymentTypeEnum.VNPAY,
           amount,
           status: TransactionStatusEnum.FAILURE,
-          transaction_type,
+          transaction_type: TransactionTypeEnum.PAY,
           product_type,
         });
         await transaction.save();
       }
 
       return {
-        redirectUrl: `https://hemedy.vercel.app/`,
+        redirectUrl: `https://hemedy.onrender.com/session`,
       };
     }
+  }
+
+  async payProductByAccountBalance(
+    user: any,
+    payProductAccountBalanceTransactionDto: PayProductAccountBalanceTransactionDto,
+  ) {
+    if (user.account_balance < payProductAccountBalanceTransactionDto.amount) {
+      throw new BadGatewayException(
+        'Số dư tài khoản không đủ để thực hiện thanh toán. Vui lòng chọn hình thức khác hoặc nạp tiền vào tài khoản!',
+      );
+    }
+    const current_time = new Date().getTime().toString();
+
+    const transaction = new this.transactionModel({
+      user_id: user._id,
+      transaction_code: `${user._id}-${current_time}2as4sad2-${current_time}`,
+      payment_type: PaymentTypeEnum.ACCOUNT_BALANCE,
+      amount: payProductAccountBalanceTransactionDto.amount,
+      status: TransactionStatusEnum.SUCCESS,
+      transaction_type: TransactionTypeEnum.PAY,
+      product_type: payProductAccountBalanceTransactionDto.product_type,
+    });
+    await transaction.save();
+
+    const new_balance =
+      user.account_balance - payProductAccountBalanceTransactionDto.amount;
+    await this.userModel.findByIdAndUpdate(
+      user._id,
+      { account_balance: new_balance },
+      { new: true },
+    );
+
+    return {
+      redirectUrl: `https://hemedy.onrender.com/account`,
+    };
   }
 
   async getAllCoursesOfUser(user: any): Promise<Transaction[]> {

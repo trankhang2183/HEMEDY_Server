@@ -2,10 +2,15 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 export class CreateConfigResultDto {
-  @ApiProperty({ example: 85, description: 'Unique Score' })
+  @ApiProperty({ example: 85, description: 'Min Score' })
   @IsNotEmpty()
   @IsNumber()
-  score: number;
+  min_score: number;
+
+  @ApiProperty({ example: 85, description: 'Max Score' })
+  @IsNotEmpty()
+  @IsNumber()
+  max_score: number;
 
   @ApiProperty({
     example: 'You have a great result!',

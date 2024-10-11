@@ -72,6 +72,24 @@ export class UserService {
     }
   }
 
+  async getDoctorById(id: string): Promise<User> {
+    try {
+      const user = await this.userModel
+        .findOne({
+          _id: id,
+          role_name: RoleEnum.DOCTOR,
+        })
+        .populate('role')
+        .exec();
+      if (!user) {
+        throw new Error(`Không tìm thấy bác sĩ`);
+      }
+      return user;
+    } catch (error) {
+      throw new NotFoundException(error.message);
+    }
+  }
+
   async getUserByEmail(email: string): Promise<User> {
     try {
       const user = await this.userModel

@@ -9,11 +9,18 @@ export type ConfigResultDocument = mongoose.HydratedDocument<ConfigResult>;
 })
 export class ConfigResult {
   @ApiProperty({
-    description: 'Unique Score',
+    description: 'Min Score',
     example: 85,
   })
   @Prop({ required: true, unique: true })
-  score: number;
+  min_score: number;
+
+  @ApiProperty({
+    description: 'Max Score',
+    example: 85,
+  })
+  @Prop({ required: true, unique: true })
+  max_score: number;
 
   @ApiProperty({
     description: 'Result Content',

@@ -17,6 +17,13 @@ export class Transaction {
   user_id: User;
 
   @ApiProperty({
+    description: 'Transaction Code',
+    example: 'transaction_code',
+  })
+  @Prop({ required: true })
+  transaction_code: string;
+
+  @ApiProperty({
     description: 'Payment Type',
     example: 'MoMo',
   })

@@ -9,6 +9,8 @@ import {
   ConfigResult,
   ConfigResultDocument,
 } from './entities/config_result.entity';
+import { CreateConfigResultDto } from './dto/create-config_result.dto';
+import { UpdateConfigResultDto } from './dto/update-config_result.dto';
 
 @Injectable()
 export class ConfigResultService {
@@ -17,15 +19,19 @@ export class ConfigResultService {
     private readonly configResultModel: Model<ConfigResultDocument>,
   ) {}
 
-  async createConfigResult(createConfigResultDto: any): Promise<ConfigResult> {
-    const checkExistScore = await this.configResultModel.findOne({
-      score: createConfigResultDto.score,
+  async createConfigResult(
+    createConfigResultDto: CreateConfigResultDto,
+  ): Promise<ConfigResult> {
+    if (createConfigResultDto.min_score > createConfigResultDto.max_score) {
+      throw new BadGatewayException('Max score must be greater than min score');
+    }
+    const checkExistConfig = await this.configResultModel.findOne({
+      min_score: createConfigResultDto.min_score,
+      max_score: createConfigResultDto.max_score,
     });
-    if (checkExistScore) {
+    if (checkExistConfig) {
       throw new BadGatewayException(
-        'ConfigResult with score ' +
-          createConfigResultDto.score +
-          ' already exists',
+        `Config Result with min score ${createConfigResultDto.min_score} and max score ${createConfigResultDto.max_score} is already exist`,
       );
     }
     const newConfigResult = new this.configResultModel(createConfigResultDto);
@@ -36,24 +42,50 @@ export class ConfigResultService {
     return this.configResultModel.find().exec();
   }
 
-  async getConfigResultByScore(score: number): Promise<ConfigResult> {
-    const configResult = await this.configResultModel.findOne({ score }).exec();
+  async getConfigResultByMinMaxScore(
+    min_score: number,
+    max_score: number,
+  ): Promise<ConfigResult> {
+    const configResult = await this.configResultModel
+      .findOne({ min_score, max_score })
+      .exec();
     if (!configResult) {
-      throw new NotFoundException(`ConfigResult with score ${score} not found`);
+      throw new NotFoundException(
+        `ConfigResult with min score: ${min_score} and max score ${max_score} not found`,
+      );
     }
     return configResult;
   }
 
+  async getConfigResultByScore(score: number): Promise<ConfigResult> {
+    const configResult = await this.configResultModel
+      .findOne({ min_score: { $lte: score }, max_score: { $gte: score } })
+      .exec();
+
+    if (!configResult) {
+      throw new NotFoundException(
+        `ConfigResult suitable for score ${score} not found`,
+      );
+    }
+
+    return configResult;
+  }
+
   async updateConfigResultByScore(
-    score: number,
-    updateConfigResultDto: any,
+    min_score: number,
+    max_score: number,
+    updateConfigResultDto: UpdateConfigResultDto,
   ): Promise<ConfigResult> {
     const updatedConfigResult = await this.configResultModel
-      .findOneAndUpdate({ score }, updateConfigResultDto, { new: true })
+      .findOneAndUpdate({ min_score, max_score }, updateConfigResultDto, {
+        new: true,
+      })
       .exec();
 
     if (!updatedConfigResult) {
-      throw new NotFoundException(`ConfigResult with score ${score} not found`);
+      throw new NotFoundException(
+        `ConfigResult with min score: ${min_score} and max score ${max_score} not found`,
+      );
     }
     return updatedConfigResult;
   }
