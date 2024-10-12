@@ -3,8 +3,10 @@ import { PayProductTransactionDto } from './dto/pay-product-transaction.dto';
 import { AddFundTransactionDto } from './dto/add-funds-transaction.dto';
 import {
   BadGatewayException,
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
@@ -21,6 +23,18 @@ import { TransactionStatusEnum } from './enum/transaction-status.enum';
 import { TransactionTypeEnum } from './enum/transaction-type.enum';
 import Stripe from 'stripe';
 import { PayProductStripeTransactionDto } from './dto/pay-product-stripe-transaction.dto';
+import {
+  ScheduleSlotEnum,
+  TimeOfSlotInSchedule,
+} from 'src/doctor-schedule/enum/schedule-slot.enum';
+import {
+  DoctorSchedule,
+  DoctorScheduleDocument,
+} from 'src/doctor-schedule/entities/doctor-schedule.entity';
+import { DoctorScheduleStatus } from 'src/doctor-schedule/enum/doctor-schedule-status.enum';
+import { PayScheduleStripeTransactionDto } from './dto/pay-schedule-stripe-transaction.dto';
+import { PayScheduleTransactionDto } from './dto/pay-schedule-momo-transaction.dto';
+import { PayScheduleAccountBalanceTransactionDto } from './dto/pay-schedule-account-balance-transaction.dto';
 
 @Injectable()
 export class TransactionService {
@@ -34,11 +48,36 @@ export class TransactionService {
 
     @InjectModel(Transaction.name)
     private readonly transactionModel: Model<Transaction>,
+
+    @InjectModel(DoctorSchedule.name)
+    private readonly doctorScheduleModel: Model<DoctorScheduleDocument>,
   ) {
     this.stripe = new Stripe(
       this.configService.get<string>('STRIPE_SECRET_KEY'),
     );
   }
+
+  slotOfDate = [
+    ScheduleSlotEnum.SLOT1,
+    ScheduleSlotEnum.SLOT2,
+    ScheduleSlotEnum.SLOT3,
+    ScheduleSlotEnum.SLOT4,
+    ScheduleSlotEnum.SLOT5,
+    ScheduleSlotEnum.SLOT6,
+    ScheduleSlotEnum.SLOT7,
+    ScheduleSlotEnum.SLOT8,
+  ];
+
+  timeOfSlot = [
+    TimeOfSlotInSchedule.SLOT1,
+    TimeOfSlotInSchedule.SLOT2,
+    TimeOfSlotInSchedule.SLOT3,
+    TimeOfSlotInSchedule.SLOT4,
+    TimeOfSlotInSchedule.SLOT5,
+    TimeOfSlotInSchedule.SLOT6,
+    TimeOfSlotInSchedule.SLOT7,
+    TimeOfSlotInSchedule.SLOT8,
+  ];
 
   async addFundsByStripe(
     addFundTransactionDto: AddFundTransactionDto,
@@ -130,6 +169,84 @@ export class TransactionService {
     }
   }
 
+  async payForScheduleByStripe(
+    payScheduleTransactionDto: PayScheduleStripeTransactionDto,
+    user: any,
+  ): Promise<string> {
+    //Check schedule before checkout
+    const now = moment(new Date());
+    const scheduleDate = moment(payScheduleTransactionDto.appointment_date);
+    const scheduleTime = this.timeOfSlot
+      .find((slot) => slot.includes(payScheduleTransactionDto.slot))
+      .split('-')[1];
+    if (
+      scheduleDate.clone().startOf('day').isSame(now.clone().startOf('day')) &&
+      Number.parseInt(scheduleTime) - now.hour() < 2
+    ) {
+      throw new BadRequestException(
+        'Slot must be greater than the current time 2 hours',
+      );
+    }
+    const doctor = await this.userModel
+      .findById(payScheduleTransactionDto.doctor_id)
+      .exec();
+    if (!doctor) {
+      throw new NotFoundException('Doctor not found');
+    }
+    const checkExistSchedule = await this.doctorScheduleModel.findOne({
+      doctor_id: doctor._id,
+      appointment_date: payScheduleTransactionDto.appointment_date,
+      slot: payScheduleTransactionDto.slot,
+    });
+    if (checkExistSchedule) {
+      throw new BadRequestException('This slot already booked!');
+    }
+
+    // Create Stripe checkout session
+    try {
+      const session = await this.stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'vnd',
+              product_data: {
+                name: `${payScheduleTransactionDto.name}`,
+                images: [payScheduleTransactionDto.image],
+                description: `${payScheduleTransactionDto.description}`,
+              },
+              unit_amount: payScheduleTransactionDto.amount,
+            },
+            quantity: 1,
+          },
+        ],
+        metadata: {
+          order_id: `${user._id}-${new Date()
+            .getTime()
+            .toString()}2ad5ad23at3awe1-${new Date().getTime().toString()}-${
+            payScheduleTransactionDto.product_type
+          }`,
+          schedule_data: `${payScheduleTransactionDto.doctor_id}-${payScheduleTransactionDto.appointment_date}-${payScheduleTransactionDto.slot}`,
+        },
+        mode: 'payment',
+        expires_at: Math.floor(Date.now() / 1000) + 60 * 30, // Hết hạn sau 30 phút
+        customer_email: user.email,
+        success_url: `${this.configService.get(
+          'ReturnStripePaymentUrl',
+        )}?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${this.configService.get(
+          'ReturnStripePaymentUrl',
+        )}?session_id={CHECKOUT_SESSION_ID}`,
+      });
+      console.log(session);
+      // Trả về URL để chuyển hướng khách hàng tới trang thanh toán
+      return session.url;
+    } catch (error) {
+      console.error('Error creating Stripe Checkout session:', error.message);
+      throw new Error('Could not create Stripe Checkout session');
+    }
+  }
+
   async paymentStripeCallback(data: any): Promise<any> {
     const result = await this.stripe.checkout.sessions.retrieve(
       data.session_id,
@@ -149,6 +266,18 @@ export class TransactionService {
           amount,
           status: TransactionStatusEnum.FAILURE,
           transaction_type: TransactionTypeEnum.ADD_FUNDS,
+        });
+        await transaction.save();
+      } else if (transaction_type === `${current_time}2ad5ad23at3awe1`) {
+        const product_type = result.metadata.order_id.split('-')[3];
+        transaction = new this.transactionModel({
+          user_id,
+          transaction_code: `${user_id}-${transaction_type}-${current_time}`,
+          payment_type: PaymentTypeEnum.STRIPE,
+          amount,
+          status: TransactionStatusEnum.FAILURE,
+          transaction_type: TransactionTypeEnum.SCHEDULE,
+          product_type,
         });
         await transaction.save();
       } else {
@@ -186,6 +315,32 @@ export class TransactionService {
       const user = await this.userModel.findById(transaction.user_id);
       user.account_balance += amount;
       await user.save();
+    } else if (transaction_type === `${current_time}2ad5ad23at3awe1`) {
+      const product_type = result.metadata.order_id.split('-')[3];
+      transaction = new this.transactionModel({
+        user_id,
+        transaction_code: `${user_id}-${transaction_type}-${current_time}`,
+        payment_type: PaymentTypeEnum.STRIPE,
+        amount,
+        status: TransactionStatusEnum.SUCCESS,
+        transaction_type: TransactionTypeEnum.SCHEDULE,
+        product_type,
+      });
+      await transaction.save();
+
+      //Create schedule
+      const schedule_data = result.metadata.schedule_data.split('-');
+      const doctor_id = schedule_data[0];
+      const appointment_date = schedule_data[1];
+      const slot = schedule_data[2];
+      const newDoctorSchedule = new this.doctorScheduleModel({
+        customer_id: user_id,
+        doctor_id,
+        appointment_date,
+        slot,
+        status: DoctorScheduleStatus.PENDING,
+      });
+      await newDoctorSchedule.save();
     } else {
       const product_type = result.metadata.order_id.split('-')[3];
       transaction = new this.transactionModel({
@@ -349,6 +504,111 @@ export class TransactionService {
     }
   }
 
+  async payForScheduleByMoMo(
+    payScheduleTransactionDto: PayScheduleTransactionDto,
+    user: any,
+  ): Promise<string> {
+    //Check schedule before checkout
+    const now = moment(new Date());
+    const scheduleDate = moment(payScheduleTransactionDto.appointment_date);
+    const scheduleTime = this.timeOfSlot
+      .find((slot) => slot.includes(payScheduleTransactionDto.slot))
+      .split('-')[1];
+    if (
+      scheduleDate.clone().startOf('day').isSame(now.clone().startOf('day')) &&
+      Number.parseInt(scheduleTime) - now.hour() < 2
+    ) {
+      throw new BadRequestException(
+        'Slot must be greater than the current time 2 hours',
+      );
+    }
+    const doctor = await this.userModel
+      .findById(payScheduleTransactionDto.doctor_id)
+      .exec();
+    if (!doctor) {
+      throw new NotFoundException('Doctor not found');
+    }
+    const checkExistSchedule = await this.doctorScheduleModel.findOne({
+      doctor_id: doctor._id,
+      appointment_date: payScheduleTransactionDto.appointment_date,
+      slot: payScheduleTransactionDto.slot,
+    });
+    if (checkExistSchedule) {
+      throw new BadRequestException('This slot already booked!');
+    }
+
+    // create momo url
+    const partnerCode: string = this.configService.get('PartnerCode');
+    const accessKey: string = this.configService.get('AccessKey');
+    const secretKey: string = this.configService.get('SecretKey');
+    const MoMoApiUrl: string = this.configService.get('MoMoApiUrl');
+    const ipnUrl = this.configService.get('ReturnMoMoPaymentUrl');
+    const redirectUrl = this.configService.get('ReturnMoMoPaymentUrl');
+    const orderId = `${user._id}-${new Date()
+      .getTime()
+      .toString()}2ad5ad23at3awe1-${new Date().getTime().toString()}-${
+      payScheduleTransactionDto.product_type
+    }`;
+    const requestId = `${payScheduleTransactionDto.doctor_id}-${
+      payScheduleTransactionDto.appointment_date
+    }-${payScheduleTransactionDto.slot}-${new Date().getTime().toString()}`;
+    const orderInfo = `${payScheduleTransactionDto.name}`;
+    const requestType = 'captureWallet';
+    const extraData = '';
+    const orderGroupId = '';
+    const autoCapture = true;
+    const amount = payScheduleTransactionDto.amount;
+    const lang = 'vi';
+
+    const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
+
+    const signature = crypto
+      .createHmac('sha256', secretKey)
+      .update(rawSignature)
+      .digest('hex');
+
+    const requestBody = JSON.stringify({
+      partnerCode: partnerCode,
+      partnerName: 'Test',
+      storeId: 'MomoTestStore',
+      requestId: requestId,
+      amount: amount,
+      orderId: orderId,
+      orderInfo: orderInfo,
+      redirectUrl: redirectUrl,
+      ipnUrl: ipnUrl,
+      lang: lang,
+      requestType: requestType,
+      autoCapture: autoCapture,
+      extraData: extraData,
+      orderGroupId: orderGroupId,
+      signature: signature,
+    });
+    const options = {
+      method: 'POST',
+      url: MoMoApiUrl,
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(requestBody),
+      },
+      data: requestBody,
+    };
+
+    try {
+      const response = await axios(options);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        console.error('Error response:', error.response.data);
+        console.error('Error status:', error.response.status);
+        console.error('Error headers:', error.response.headers);
+      } else {
+        console.error('Error:', error.message);
+      }
+      throw new Error('Không thể tạo yêu cầu thanh toán MoMo');
+    }
+  }
+
   async paymentMoMoCallback(data: any): Promise<any> {
     const user_id: number = data.orderId.split('-')[0];
     const transaction_type = data.orderId.split('-')[1];
@@ -366,6 +626,18 @@ export class TransactionService {
           amount,
           status: TransactionStatusEnum.FAILURE,
           transaction_type: TransactionTypeEnum.ADD_FUNDS,
+        });
+        await transaction.save();
+      } else if (transaction_type === `${current_time}2ad5ad23at3awe1`) {
+        const product_type = data.orderId.split('-')[3];
+        transaction = new this.transactionModel({
+          user_id,
+          transaction_code: `${user_id}-${transaction_type}-${current_time}`,
+          payment_type: PaymentTypeEnum.MOMO,
+          amount,
+          status: TransactionStatusEnum.FAILURE,
+          transaction_type: TransactionTypeEnum.SCHEDULE,
+          product_type,
         });
         await transaction.save();
       } else {
@@ -403,6 +675,32 @@ export class TransactionService {
       const user = await this.userModel.findById(transaction.user_id);
       user.account_balance += amount;
       await user.save();
+    } else if (transaction_type === `${current_time}2ad5ad23at3awe1`) {
+      const product_type = data.orderId.split('-')[3];
+      transaction = new this.transactionModel({
+        user_id,
+        transaction_code: `${user_id}-${transaction_type}-${current_time}`,
+        payment_type: PaymentTypeEnum.MOMO,
+        amount,
+        status: TransactionStatusEnum.SUCCESS,
+        transaction_type: TransactionTypeEnum.SCHEDULE,
+        product_type,
+      });
+      await transaction.save();
+
+      //Create schedule
+      const schedule_data = data.requestId.split('-');
+      const doctor_id = schedule_data[0];
+      const appointment_date = schedule_data[1];
+      const slot = schedule_data[2];
+      const newDoctorSchedule = new this.doctorScheduleModel({
+        customer_id: user_id,
+        doctor_id,
+        appointment_date,
+        slot,
+        status: DoctorScheduleStatus.PENDING,
+      });
+      await newDoctorSchedule.save();
     } else {
       const product_type = data.orderId.split('-')[3];
       transaction = new this.transactionModel({
@@ -534,6 +832,94 @@ export class TransactionService {
     return vnpUrl;
   }
 
+  async payForScheduleByVNPay(
+    payScheduleTransactionDto: PayScheduleTransactionDto,
+    user: any,
+    req: Request,
+  ): Promise<string> {
+    //Check schedule before checkout
+    const now = moment(new Date());
+    const scheduleDate = moment(payScheduleTransactionDto.appointment_date);
+    const scheduleTime = this.timeOfSlot
+      .find((slot) => slot.includes(payScheduleTransactionDto.slot))
+      .split('-')[1];
+    if (
+      scheduleDate.clone().startOf('day').isSame(now.clone().startOf('day')) &&
+      Number.parseInt(scheduleTime) - now.hour() < 2
+    ) {
+      throw new BadRequestException(
+        'Slot must be greater than the current time 2 hours',
+      );
+    }
+    const doctor = await this.userModel
+      .findById(payScheduleTransactionDto.doctor_id)
+      .exec();
+    if (!doctor) {
+      throw new NotFoundException('Doctor not found');
+    }
+    const checkExistSchedule = await this.doctorScheduleModel.findOne({
+      doctor_id: doctor._id,
+      appointment_date: payScheduleTransactionDto.appointment_date,
+      slot: payScheduleTransactionDto.slot,
+    });
+    if (checkExistSchedule) {
+      throw new BadRequestException('This slot already booked!');
+    }
+
+    // create vnpay url
+    const ipAddr = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+    const tmnCode = this.configService.get('TmnCode');
+    const secretKey = this.configService.get('HashSecret');
+    let vnpUrl = this.configService.get('BaseUrl');
+    const returnUrl = this.configService.get('ReturnVnPayPaymentUrl');
+
+    const date = new Date();
+
+    const createDate = moment(date).format('YYYYMMDDHHmmss');
+    const orderId = moment(date).format('DDHHmmss');
+    const amount = payScheduleTransactionDto.amount;
+    const bankCode = '';
+
+    const orderInfo = `${user._id}-${new Date()
+      .getTime()
+      .toString()}-${new Date().getTime().toString()}-${
+      payScheduleTransactionDto.product_type
+    }`;
+    const orderType = `${payScheduleTransactionDto.doctor_id}-${
+      payScheduleTransactionDto.appointment_date
+    }-${payScheduleTransactionDto.slot}-${new Date().getTime().toString()}`;
+    const locale = 'vn';
+
+    const currCode = 'VND';
+    let vnp_Params = {};
+    vnp_Params['vnp_Version'] = '2.1.0';
+    vnp_Params['vnp_Command'] = 'pay';
+    vnp_Params['vnp_TmnCode'] = tmnCode;
+    vnp_Params['vnp_Locale'] = locale;
+    vnp_Params['vnp_CurrCode'] = currCode;
+    vnp_Params['vnp_TxnRef'] = orderId;
+    vnp_Params['vnp_OrderInfo'] = orderInfo;
+    vnp_Params['vnp_OrderType'] = orderType;
+    vnp_Params['vnp_Amount'] = amount * 100;
+    vnp_Params['vnp_ReturnUrl'] = returnUrl;
+    vnp_Params['vnp_IpAddr'] = ipAddr;
+    vnp_Params['vnp_CreateDate'] = createDate;
+    if (bankCode !== null && bankCode !== '') {
+      vnp_Params['vnp_BankCode'] = bankCode;
+    }
+
+    vnp_Params = this.sortObject(vnp_Params);
+
+    const signData = querystring.stringify(vnp_Params, { encode: false });
+    const hmac = crypto.createHmac('sha512', secretKey);
+    const signed = hmac.update(new Buffer(signData, 'utf-8')).digest('hex');
+    vnp_Params['vnp_SecureHash'] = signed;
+    vnpUrl += '?' + querystring.stringify(vnp_Params, { encode: false });
+
+    return vnpUrl;
+  }
+
   async paymentVnPayCallback(data: any): Promise<any> {
     let vnp_Params = data;
     const secureHash = vnp_Params['vnp_SecureHash'];
@@ -571,6 +957,32 @@ export class TransactionService {
         const user = await this.userModel.findById(user_id);
         user.account_balance += amount;
         await user.save();
+      } else if (transaction_type === `${current_time}2ad5ad23at3awe1`) {
+        const product_type = vnp_Params['vnp_OrderInfo'].split('-')[3];
+        transaction = new this.transactionModel({
+          user_id,
+          transaction_code: `${user_id}-${transaction_type}-${current_time}`,
+          payment_type: PaymentTypeEnum.VNPAY,
+          amount,
+          status: TransactionStatusEnum.SUCCESS,
+          transaction_type: TransactionTypeEnum.SCHEDULE,
+          product_type,
+        });
+        await transaction.save();
+
+        //Create schedule
+        const schedule_data = vnp_Params['vnp_OrderType'].split('-');
+        const doctor_id = schedule_data[0];
+        const appointment_date = schedule_data[1];
+        const slot = schedule_data[2];
+        const newDoctorSchedule = new this.doctorScheduleModel({
+          customer_id: user_id,
+          doctor_id,
+          appointment_date,
+          slot,
+          status: DoctorScheduleStatus.PENDING,
+        });
+        await newDoctorSchedule.save();
       } else {
         const product_type = vnp_Params['vnp_OrderInfo'].split('-')[3];
         transaction = new this.transactionModel({
@@ -599,6 +1011,18 @@ export class TransactionService {
           amount,
           status: TransactionStatusEnum.FAILURE,
           transaction_type: TransactionTypeEnum.ADD_FUNDS,
+        });
+        await transaction.save();
+      } else if (transaction_type === `${current_time}2ad5ad23at3awe1`) {
+        const product_type = vnp_Params['vnp_OrderInfo'].split('-')[3];
+        transaction = new this.transactionModel({
+          user_id,
+          transaction_code: `${user_id}-${transaction_type}-${current_time}`,
+          payment_type: PaymentTypeEnum.VNPAY,
+          amount,
+          status: TransactionStatusEnum.FAILURE,
+          transaction_type: TransactionTypeEnum.SCHEDULE,
+          product_type,
         });
         await transaction.save();
       } else {
@@ -634,11 +1058,11 @@ export class TransactionService {
 
     const transaction = new this.transactionModel({
       user_id: user._id,
-      transaction_code: `${user._id}-${current_time}2as4sad2-${current_time}`,
+      transaction_code: `${user._id}-${current_time}2ad5ad23at3awe1-${current_time}`,
       payment_type: PaymentTypeEnum.ACCOUNT_BALANCE,
       amount: payProductAccountBalanceTransactionDto.amount,
       status: TransactionStatusEnum.SUCCESS,
-      transaction_type: TransactionTypeEnum.PAY,
+      transaction_type: TransactionTypeEnum.SCHEDULE,
       product_type: payProductAccountBalanceTransactionDto.product_type,
     });
     await transaction.save();
@@ -650,6 +1074,89 @@ export class TransactionService {
       { account_balance: new_balance },
       { new: true },
     );
+
+    return {
+      redirectUrl: `https://hemedy.onrender.com/account`,
+    };
+  }
+
+  async payForScheduleByAccountBalance(
+    user: any,
+    payScheduleAccountBalanceTransactionDto: PayScheduleAccountBalanceTransactionDto,
+  ) {
+    if (user.account_balance < payScheduleAccountBalanceTransactionDto.amount) {
+      throw new BadGatewayException(
+        'Số dư tài khoản không đủ để thực hiện thanh toán. Vui lòng chọn hình thức khác hoặc nạp tiền vào tài khoản!',
+      );
+    }
+
+    //Check schedule before checkout
+    const now = moment(new Date());
+    const scheduleDate = moment(
+      payScheduleAccountBalanceTransactionDto.appointment_date,
+    );
+    const scheduleTime = this.timeOfSlot
+      .find((slot) =>
+        slot.includes(payScheduleAccountBalanceTransactionDto.slot),
+      )
+      .split('-')[1];
+    if (
+      scheduleDate.clone().startOf('day').isSame(now.clone().startOf('day')) &&
+      Number.parseInt(scheduleTime) - now.hour() < 2
+    ) {
+      throw new BadRequestException(
+        'Slot must be greater than the current time 2 hours',
+      );
+    }
+    const doctor = await this.userModel
+      .findById(payScheduleAccountBalanceTransactionDto.doctor_id)
+      .exec();
+    if (!doctor) {
+      throw new NotFoundException('Doctor not found');
+    }
+    const checkExistSchedule = await this.doctorScheduleModel.findOne({
+      doctor_id: doctor._id,
+      appointment_date:
+        payScheduleAccountBalanceTransactionDto.appointment_date,
+      slot: payScheduleAccountBalanceTransactionDto.slot,
+    });
+    if (checkExistSchedule) {
+      throw new BadRequestException('This slot already booked!');
+    }
+
+    const current_time = new Date().getTime().toString();
+    const transaction = new this.transactionModel({
+      user_id: user._id,
+      transaction_code: `${user._id}-${current_time}2as4sad2-${current_time}`,
+      payment_type: PaymentTypeEnum.ACCOUNT_BALANCE,
+      amount: payScheduleAccountBalanceTransactionDto.amount,
+      status: TransactionStatusEnum.SUCCESS,
+      transaction_type: TransactionTypeEnum.PAY,
+      product_type: payScheduleAccountBalanceTransactionDto.product_type,
+    });
+    await transaction.save();
+
+    const new_balance =
+      user.account_balance - payScheduleAccountBalanceTransactionDto.amount;
+    await this.userModel.findByIdAndUpdate(
+      user._id,
+      { account_balance: new_balance },
+      { new: true },
+    );
+
+    //Create schedule
+    const doctor_id = payScheduleAccountBalanceTransactionDto.doctor_id;
+    const appointment_date =
+      payScheduleAccountBalanceTransactionDto.appointment_date;
+    const slot = payScheduleAccountBalanceTransactionDto.slot;
+    const newDoctorSchedule = new this.doctorScheduleModel({
+      customer_id: user._id,
+      doctor_id,
+      appointment_date,
+      slot,
+      status: DoctorScheduleStatus.PENDING,
+    });
+    await newDoctorSchedule.save();
 
     return {
       redirectUrl: `https://hemedy.onrender.com/account`,
@@ -672,6 +1179,18 @@ export class TransactionService {
   async getAllTransactionOfUser(user: any): Promise<Transaction[]> {
     const transactions = await this.transactionModel.find({
       user_id: user._id,
+    });
+    if (!transactions) {
+      throw new InternalServerErrorException(
+        'Something went wrong when getting all courses',
+      );
+    }
+    return transactions;
+  }
+
+  async getAllTransactionOfUserByAdmin(user_id: any): Promise<Transaction[]> {
+    const transactions = await this.transactionModel.find({
+      user_id,
     });
     if (!transactions) {
       throw new InternalServerErrorException(

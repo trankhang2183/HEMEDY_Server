@@ -1,8 +1,11 @@
+import { PayScheduleAccountBalanceTransactionDto } from './dto/pay-schedule-account-balance-transaction.dto';
+import { PayScheduleStripeTransactionDto } from './dto/pay-schedule-stripe-transaction.dto';
 import { PayProductAccountBalanceTransactionDto } from './dto/pay-product-account-balance-transaction.dto';
 import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
   Req,
   Res,
@@ -21,6 +24,7 @@ import { AddFundTransactionDto } from './dto/add-funds-transaction.dto';
 import { PayProductTransactionDto } from './dto/pay-product-transaction.dto';
 import { Transaction } from './entities/transaction.entity';
 import { PayProductStripeTransactionDto } from './dto/pay-product-stripe-transaction.dto';
+import { PayScheduleTransactionDto } from './dto/pay-schedule-momo-transaction.dto';
 
 @ApiTags('Transaction')
 @Controller('transaction')
@@ -35,6 +39,18 @@ export class TransactionController {
   @Get()
   getAllTransactionOfUser(@GetUser() user: any): Promise<Transaction[]> {
     return this.transactionService.getAllTransactionOfUser(user);
+  }
+
+  @ApiOperation({ summary: 'Get all transaction of user by Admin' })
+  @Roles(RoleEnum.ADMIN)
+  @UseGuards(RolesGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtGuard)
+  @Get('admin/:user_id')
+  getAllTransactionOfUserByAdmin(
+    @Param('user_id') user_id: string,
+  ): Promise<Transaction[]> {
+    return this.transactionService.getAllTransactionOfUserByAdmin(user_id);
   }
 
   @ApiOperation({ summary: 'Get all courses of user' })
@@ -79,6 +95,22 @@ export class TransactionController {
     );
   }
 
+  @ApiOperation({ summary: 'Pay Schedule By Stripe' })
+  @Roles(RoleEnum.CUSTOMER)
+  @UseGuards(RolesGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtGuard)
+  @Post('/stripe/paySchedule')
+  payForScheduleByStripe(
+    @Body() payScheduleStripeTransactionDto: PayScheduleStripeTransactionDto,
+    @GetUser() user: any,
+  ): Promise<string> {
+    return this.transactionService.payForScheduleByStripe(
+      payScheduleStripeTransactionDto,
+      user,
+    );
+  }
+
   @ApiOperation({ summary: 'Stripe Payment Callback' })
   @Get('/stripe/paymentCallback')
   async paymentStripeCallback(
@@ -116,6 +148,22 @@ export class TransactionController {
   ): Promise<string> {
     return this.transactionService.payProductByMoMo(
       payProductTransactionDto,
+      user,
+    );
+  }
+
+  @ApiOperation({ summary: 'Pay Schedule By MoMo' })
+  @Roles(RoleEnum.CUSTOMER)
+  @UseGuards(RolesGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtGuard)
+  @Post('/MoMo/paySchedule')
+  payForScheduleByMoMo(
+    @Body() payScheduleTransactionDto: PayScheduleTransactionDto,
+    @GetUser() user: any,
+  ): Promise<string> {
+    return this.transactionService.payForScheduleByMoMo(
+      payScheduleTransactionDto,
       user,
     );
   }
@@ -168,6 +216,24 @@ export class TransactionController {
     );
   }
 
+  @ApiOperation({ summary: 'Pay Schedule By VnPay' })
+  @Roles(RoleEnum.CUSTOMER)
+  @UseGuards(RolesGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtGuard)
+  @Post('/vnPay/paySchedule')
+  payForScheduleByVNPay(
+    @Body() payScheduleTransactionDto: PayScheduleTransactionDto,
+    @Req() request: Request,
+    @GetUser() user: User,
+  ): Promise<string> {
+    return this.transactionService.payForScheduleByVNPay(
+      payScheduleTransactionDto,
+      user,
+      request,
+    );
+  }
+
   @ApiOperation({ summary: 'VnPay Payment Callback' })
   @Get('/vnPay/paymentCallback')
   async paymentVnPayCallback(
@@ -195,6 +261,25 @@ export class TransactionController {
     const result = await this.transactionService.payProductByAccountBalance(
       user,
       payProductAccountBalanceTransactionDto,
+    );
+    response.redirect(result.redirectUrl);
+  }
+
+  @ApiOperation({ summary: 'Pay Schedule By Account Balance' })
+  @Roles(RoleEnum.CUSTOMER)
+  @UseGuards(RolesGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtGuard)
+  @Post('/accountBalance/paySchedule')
+  async payForScheduleByAccountBalance(
+    @Body()
+    payScheduleAccountBalanceTransactionDto: PayScheduleAccountBalanceTransactionDto,
+    @Res() response: Response,
+    @GetUser() user: User,
+  ): Promise<any> {
+    const result = await this.transactionService.payForScheduleByAccountBalance(
+      user,
+      payScheduleAccountBalanceTransactionDto,
     );
     response.redirect(result.redirectUrl);
   }

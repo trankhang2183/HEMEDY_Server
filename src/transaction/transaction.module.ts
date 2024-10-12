@@ -7,6 +7,10 @@ import { Role, RoleSchema } from 'src/role/entities/role.entity';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from 'src/user/user.service';
 import { Transaction, TransactionSchema } from './entities/transaction.entity';
+import {
+  DoctorSchedule,
+  DoctorScheduleSchema,
+} from 'src/doctor-schedule/entities/doctor-schedule.entity';
 
 @Module({
   imports: [
@@ -14,6 +18,7 @@ import { Transaction, TransactionSchema } from './entities/transaction.entity';
       { name: User.name, schema: UserSchema },
       { name: Role.name, schema: RoleSchema },
       { name: Transaction.name, schema: TransactionSchema },
+      { name: DoctorSchedule.name, schema: DoctorScheduleSchema },
     ]),
   ],
   controllers: [TransactionController],
