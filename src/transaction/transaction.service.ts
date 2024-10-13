@@ -1127,11 +1127,11 @@ export class TransactionService {
     const current_time = new Date().getTime().toString();
     const transaction = new this.transactionModel({
       user_id: user._id,
-      transaction_code: `${user._id}-${current_time}2as4sad2-${current_time}`,
+      transaction_code: `${user._id}-${current_time}2ad5ad23at3awe1-${current_time}`,
       payment_type: PaymentTypeEnum.ACCOUNT_BALANCE,
       amount: payScheduleAccountBalanceTransactionDto.amount,
       status: TransactionStatusEnum.SUCCESS,
-      transaction_type: TransactionTypeEnum.PAY,
+      transaction_type: TransactionTypeEnum.SCHEDULE,
       product_type: payScheduleAccountBalanceTransactionDto.product_type,
     });
     await transaction.save();
@@ -1188,10 +1188,11 @@ export class TransactionService {
     return transactions;
   }
 
-  async getAllTransactionOfUserByAdmin(user_id: any): Promise<Transaction[]> {
-    const transactions = await this.transactionModel.find({
-      user_id,
-    });
+  async getAllTransactionByAdmin(): Promise<Transaction[]> {
+    const transactions = await this.transactionModel
+      .find()
+      .populate('user_id')
+      .sort({ createdAt: -1 });
     if (!transactions) {
       throw new InternalServerErrorException(
         'Something went wrong when getting all courses',

@@ -46,11 +46,9 @@ export class TransactionController {
   @UseGuards(RolesGuard)
   @ApiBearerAuth()
   @UseGuards(JwtGuard)
-  @Get('admin/:user_id')
-  getAllTransactionOfUserByAdmin(
-    @Param('user_id') user_id: string,
-  ): Promise<Transaction[]> {
-    return this.transactionService.getAllTransactionOfUserByAdmin(user_id);
+  @Get('admin')
+  getAllTransactionByAdmin(): Promise<Transaction[]> {
+    return this.transactionService.getAllTransactionByAdmin();
   }
 
   @ApiOperation({ summary: 'Get all courses of user' })
