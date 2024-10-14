@@ -162,6 +162,33 @@ export class UserService {
     }
   }
 
+  async deleteAccount(email: string): Promise<string> {
+    try {
+      const user = await this.userModel
+        .findOne({
+          email,
+        })
+        .populate('role')
+        .exec();
+      if (!user) {
+        throw new Error(`Người dùng với email ${email} không tồn tại`);
+      }
+      if (user.role_name == RoleEnum.ADMIN) {
+        throw new Error('Không thể xóa Admin account');
+      }
+      if (!user.is_ban) {
+        throw new Error('Chỉ có thể xóa tài khoản đang bị khóa');
+      }
+      const result = await this.userModel.findByIdAndDelete(user._id).exec();
+      if (!result) {
+        throw new Error('Có lỗi xảy ra khi xóa tài khoản người dùng');
+      }
+      return `Đã xóa thành công user với email ${email} `;
+    } catch (error) {
+      throw new InternalServerErrorException(error.message);
+    }
+  }
+
   async searchUserByEmailForAdmin(
     searchEmail: string,
     roleName: RoleEnum,

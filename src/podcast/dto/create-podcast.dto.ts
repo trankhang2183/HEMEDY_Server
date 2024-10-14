@@ -19,7 +19,7 @@ export class CreatePodcastDto {
   @IsString()
   @IsNotEmpty()
   @IsUrl()
-  audioLink: string;
+  audio_link: string;
 
   @ApiProperty({
     description: 'Image URL for the podcast',
@@ -28,7 +28,7 @@ export class CreatePodcastDto {
   @IsString()
   @IsNotEmpty()
   @IsUrl()
-  imgUrl: string;
+  img_url: string;
 
   @ApiProperty({
     description: 'Author of the podcast',

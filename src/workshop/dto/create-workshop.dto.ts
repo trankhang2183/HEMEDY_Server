@@ -12,6 +12,15 @@ export class CreateWorkshopDto {
   title: string;
 
   @ApiProperty({
+    description: 'Subtitle of the workshop',
+    example: 'Technology',
+    nullable: false,
+  })
+  @IsString()
+  @IsNotEmpty()
+  subtitle: string;
+
+  @ApiProperty({
     description: 'Type of the workshop (e.g., article, tutorial)',
     example: 'article',
     nullable: false,
@@ -30,11 +39,10 @@ export class CreateWorkshopDto {
   content: string;
 
   @ApiProperty({
-    description: 'Category of the workshop',
-    example: 'Technology',
-    nullable: false,
+    description: 'Representative img of the blog',
+    example: 'img_url',
   })
   @IsString()
   @IsNotEmpty()
-  category: string;
+  representative_img: string;
 }

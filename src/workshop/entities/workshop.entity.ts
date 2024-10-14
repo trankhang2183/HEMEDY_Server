@@ -16,6 +16,13 @@ export class Workshop {
   title: string;
 
   @ApiProperty({
+    description: 'Sub Title of the workshop',
+    example: 'Web development',
+  })
+  @Prop()
+  subtitle: string;
+
+  @ApiProperty({
     description: 'Type of the workshop (e.g., tutorial, seminar)',
     example: 'tutorial',
   })
@@ -30,11 +37,11 @@ export class Workshop {
   content: string;
 
   @ApiProperty({
-    description: 'Category of the workshop',
-    example: 'Technology',
+    description: 'Representative img of the blog',
+    example: 'img_url',
   })
   @Prop()
-  category: string;
+  representative_img: string;
 }
 
 export const WorkshopSchema = SchemaFactory.createForClass(Workshop);

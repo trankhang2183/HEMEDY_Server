@@ -35,6 +35,13 @@ export class Blog {
   })
   @Prop()
   category: string;
+
+  @ApiProperty({
+    description: 'Representative img of the blog',
+    example: 'img_url',
+  })
+  @Prop()
+  representative_img: string;
 }
 
 export const BlogSchema = SchemaFactory.createForClass(Blog);

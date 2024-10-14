@@ -1,4 +1,12 @@
-import { Controller, Get, Patch, Param, UseGuards, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Param,
+  UseGuards,
+  Body,
+  Delete,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { User } from './entities/user.entity';
 import { JwtGuard } from 'src/auth/jwt.guard';
@@ -158,15 +166,15 @@ export class UserController {
     return this.userService.unBanAccount(email);
   }
 
-  // @ApiOperation({ summary: 'Delete Account' })
-  // @Roles(RoleEnum.ADMIN)
-  // @UseGuards(RolesGuard)
-  // @ApiBearerAuth()
-  // @UseGuards(JwtGuard)
-  // @Delete('deleteAccount/:email')
-  // deleteAccount(@Param('email') email: string): Promise<User> {
-  //   return null;
-  // }
+  @ApiOperation({ summary: 'Delete Account' })
+  @Roles(RoleEnum.ADMIN)
+  @UseGuards(RolesGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtGuard)
+  @Delete('deleteAccount/:email')
+  deleteAccount(@Param('email') email: string): Promise<string> {
+    return this.userService.deleteAccount(email);
+  }
 
   @ApiOperation({ summary: 'Admin Statistics Account' })
   @ApiOkResponse({

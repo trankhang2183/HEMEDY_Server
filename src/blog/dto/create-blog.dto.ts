@@ -37,4 +37,12 @@ export class CreateBlogDto {
   @IsString()
   @IsNotEmpty()
   category: string;
+
+  @ApiProperty({
+    description: 'Representative img of the blog',
+    example: 'img_url',
+  })
+  @IsString()
+  @IsNotEmpty()
+  representative_img: string;
 }
