@@ -26,7 +26,7 @@ export class Blog {
     description: 'Content of the blog',
     example: 'This blog discusses...',
   })
-  @Prop()
+  @Prop({ type: mongoose.Schema.Types.String })
   content: string;
 
   @ApiProperty({

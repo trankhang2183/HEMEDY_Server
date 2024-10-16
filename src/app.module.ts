@@ -18,6 +18,9 @@ import { AnswerModule } from './answer/answer.module';
 import { DoctorScheduleModule } from './doctor-schedule/doctor-schedule.module';
 import { ResultModule } from './result/result.module';
 import { ConfigResultModule } from './config_result/config_result.module';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { EmailModule } from './email/email.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -30,6 +33,23 @@ import { ConfigResultModule } from './config_result/config_result.module';
       useFactory: async (configService: ConfigService) => ({
         uri: configService.get('MONGO_URI'),
       }),
+    }),
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (config: ConfigService) => ({
+        transport: {
+          host: config.get('MAIL_HOST'),
+          secure: false,
+          auth: {
+            user: config.get('MAIL_USER'),
+            pass: config.get('MAIL_PASSWORD'),
+          },
+        },
+        defaults: {
+          from: `"Hemedy" <${config.get('MAIL_FROM')}>`,
+        },
+      }),
+      inject: [ConfigService],
     }),
     AuthModule,
     UserModule,
@@ -47,6 +67,8 @@ import { ConfigResultModule } from './config_result/config_result.module';
     DoctorScheduleModule,
     ResultModule,
     ConfigResultModule,
+    EmailModule,
+    AdminModule,
   ],
 })
 export class AppModule {

@@ -35,6 +35,7 @@ import { DoctorScheduleStatus } from 'src/doctor-schedule/enum/doctor-schedule-s
 import { PayScheduleStripeTransactionDto } from './dto/pay-schedule-stripe-transaction.dto';
 import { PayScheduleTransactionDto } from './dto/pay-schedule-momo-transaction.dto';
 import { PayScheduleAccountBalanceTransactionDto } from './dto/pay-schedule-account-balance-transaction.dto';
+import { EmailService } from 'src/email/email.service';
 
 @Injectable()
 export class TransactionService {
@@ -42,6 +43,8 @@ export class TransactionService {
 
   constructor(
     private readonly configService: ConfigService,
+
+    private readonly emailService: EmailService,
 
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
@@ -341,6 +344,31 @@ export class TransactionService {
         status: DoctorScheduleStatus.PENDING,
       });
       await newDoctorSchedule.save();
+
+      //Send mail for customer
+      const doctor = await this.userModel.findById(doctor_id);
+      const customer = await this.userModel.findById(user_id);
+      const appointment_date_email =
+        moment(appointment_date).format('DD-MM-YYYY');
+      const scheduleTime = this.timeOfSlot
+        .find((s) => s.includes(slot))
+        .split('-')[1];
+      const slot_email = `${
+        Number.parseInt(scheduleTime) >= 12
+          ? `${Number.parseInt(scheduleTime)}h30`
+          : `${Number.parseInt(scheduleTime)}h`
+      }-${
+        Number.parseInt(scheduleTime) >= 12
+          ? `${Number.parseInt(scheduleTime) + 1}h30`
+          : `${Number.parseInt(scheduleTime) + 1}h`
+      }`;
+      await this.emailService.sendMailWhenScheduleSuccess(
+        customer.email,
+        customer.fullname,
+        appointment_date_email,
+        slot_email,
+        doctor.fullname,
+      );
     } else {
       const product_type = result.metadata.order_id.split('-')[3];
       transaction = new this.transactionModel({
@@ -701,6 +729,31 @@ export class TransactionService {
         status: DoctorScheduleStatus.PENDING,
       });
       await newDoctorSchedule.save();
+
+      //Send mail for customer
+      const doctor = await this.userModel.findById(doctor_id);
+      const customer = await this.userModel.findById(user_id);
+      const appointment_date_email =
+        moment(appointment_date).format('DD-MM-YYYY');
+      const scheduleTime = this.timeOfSlot
+        .find((s) => s.includes(slot))
+        .split('-')[1];
+      const slot_email = `${
+        Number.parseInt(scheduleTime) >= 12
+          ? `${Number.parseInt(scheduleTime)}h30`
+          : `${Number.parseInt(scheduleTime)}h`
+      }-${
+        Number.parseInt(scheduleTime) >= 12
+          ? `${Number.parseInt(scheduleTime) + 1}h30`
+          : `${Number.parseInt(scheduleTime) + 1}h`
+      }`;
+      await this.emailService.sendMailWhenScheduleSuccess(
+        customer.email,
+        customer.fullname,
+        appointment_date_email,
+        slot_email,
+        doctor.fullname,
+      );
     } else {
       const product_type = data.orderId.split('-')[3];
       transaction = new this.transactionModel({
@@ -983,6 +1036,31 @@ export class TransactionService {
           status: DoctorScheduleStatus.PENDING,
         });
         await newDoctorSchedule.save();
+
+        //Send mail for customer
+        const doctor = await this.userModel.findById(doctor_id);
+        const customer = await this.userModel.findById(user_id);
+        const appointment_date_email =
+          moment(appointment_date).format('DD-MM-YYYY');
+        const scheduleTime = this.timeOfSlot
+          .find((s) => s.includes(slot))
+          .split('-')[1];
+        const slot_email = `${
+          Number.parseInt(scheduleTime) >= 12
+            ? `${Number.parseInt(scheduleTime)}h30`
+            : `${Number.parseInt(scheduleTime)}h`
+        }-${
+          Number.parseInt(scheduleTime) >= 12
+            ? `${Number.parseInt(scheduleTime) + 1}h30`
+            : `${Number.parseInt(scheduleTime) + 1}h`
+        }`;
+        await this.emailService.sendMailWhenScheduleSuccess(
+          customer.email,
+          customer.fullname,
+          appointment_date_email,
+          slot_email,
+          doctor.fullname,
+        );
       } else {
         const product_type = vnp_Params['vnp_OrderInfo'].split('-')[3];
         transaction = new this.transactionModel({

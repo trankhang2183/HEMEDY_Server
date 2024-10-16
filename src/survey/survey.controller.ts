@@ -96,6 +96,25 @@ export class SurveyController {
   }
 
   @ApiOperation({
+    summary: 'Update a Survey Default (Admin only)',
+  })
+  @ApiOkResponse({
+    description: 'Survey has been successfully updated',
+    type: Survey,
+  })
+  @ApiNotFoundResponse({
+    description: 'Survey with ID ${surveyId} not found',
+  })
+  @Put('/default/:surveyId')
+  @Roles(RoleEnum.ADMIN)
+  @UseGuards(RolesGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtGuard)
+  updateSurveyIsDefault(@Param('surveyId') surveyId: string): Promise<Survey> {
+    return this.surveyService.updateSurveyIsDefault(surveyId);
+  }
+
+  @ApiOperation({
     summary: 'Delete a survey by ID (Admin only)',
   })
   @ApiOkResponse({

@@ -96,6 +96,40 @@ export class PodcastController {
   }
 
   @ApiOperation({
+    summary: 'Update listen quantity a podcast by ID',
+  })
+  @ApiOkResponse({
+    description: 'Podcast has been successfully updated',
+    type: Podcast,
+  })
+  @ApiNotFoundResponse({
+    description: 'Podcast with ID ${podcastId} not found',
+  })
+  @Put('listen-quantity/:podcastId')
+  updateListenQuantityPodcast(
+    @Param('podcastId') podcastId: string,
+  ): Promise<Podcast> {
+    return this.podcastService.updateListenQuantityPodcast(podcastId);
+  }
+
+  @ApiOperation({
+    summary: 'Update favorite quantity a podcast by ID',
+  })
+  @ApiOkResponse({
+    description: 'Podcast has been successfully updated',
+    type: Podcast,
+  })
+  @ApiNotFoundResponse({
+    description: 'Podcast with ID ${podcastId} not found',
+  })
+  @Put('favorite-quantity/:podcastId')
+  updateFavoriteQuantityPodcast(
+    @Param('podcastId') podcastId: string,
+  ): Promise<Podcast> {
+    return this.podcastService.updateFavoriteQuantityPodcast(podcastId);
+  }
+
+  @ApiOperation({
     summary: 'Delete a podcast by ID (Admin only)',
   })
   @ApiOkResponse({

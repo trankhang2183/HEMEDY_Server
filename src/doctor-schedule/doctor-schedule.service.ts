@@ -19,6 +19,7 @@ import {
   TimeOfSlotInSchedule,
 } from './enum/schedule-slot.enum';
 import * as moment from 'moment';
+import { EmailService } from 'src/email/email.service';
 
 @Injectable()
 export class DoctorScheduleService {
@@ -28,6 +29,8 @@ export class DoctorScheduleService {
 
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
+
+    private readonly emailService: EmailService,
   ) {}
 
   slotOfDate = [
@@ -59,17 +62,29 @@ export class DoctorScheduleService {
   ): Promise<DoctorSchedule> {
     const now = moment(new Date());
     const scheduleDate = moment(createDoctorScheduleDto.appointment_date);
+
     const scheduleTime = this.timeOfSlot
       .find((slot) => slot.includes(createDoctorScheduleDto.slot))
       .split('-')[1];
+
+    const [scheduleHour, scheduleMinute] = scheduleTime.split('h').map(Number);
+
+    const scheduleDateTime = scheduleDate.clone().set({
+      hour: scheduleHour,
+      minute: scheduleMinute,
+      second: 0,
+      millisecond: 0,
+    });
+
     if (
       scheduleDate.clone().startOf('day').isSame(now.clone().startOf('day')) &&
-      Number.parseInt(scheduleTime) - now.hour() < 2
+      scheduleDateTime.diff(now, 'hours', true) < 2
     ) {
       throw new BadRequestException(
-        'Slot must be greater than the current time 2 hours',
+        'Slot must be greater than the current time by at least 2 hours',
       );
     }
+
     const doctor = await this.userModel
       .findById(createDoctorScheduleDto.doctor_id)
       .exec();
@@ -89,6 +104,31 @@ export class DoctorScheduleService {
     );
     newDoctorSchedule.customer_id = customer._id;
     newDoctorSchedule.status = DoctorScheduleStatus.PENDING;
+
+    //Send mail for customer
+    const appointment_date_email = moment(
+      createDoctorScheduleDto.appointment_date,
+    ).format('DD-MM-YYYY');
+    const scheduleTimeaa = this.timeOfSlot
+      .find((s) => s.includes(createDoctorScheduleDto.slot))
+      .split('-')[1];
+    const slot_email = `${
+      Number.parseInt(scheduleTimeaa) >= 12
+        ? `${Number.parseInt(scheduleTimeaa)}h30`
+        : `${Number.parseInt(scheduleTimeaa)}h`
+    }-${
+      Number.parseInt(scheduleTimeaa) >= 12
+        ? `${Number.parseInt(scheduleTimeaa) + 1}h30`
+        : `${Number.parseInt(scheduleTimeaa) + 1}h`
+    }`;
+    await this.emailService.sendMailWhenScheduleSuccess(
+      customer.email,
+      customer.fullname,
+      appointment_date_email,
+      slot_email,
+      doctor.fullname,
+    );
+
     return await newDoctorSchedule.save();
   }
 

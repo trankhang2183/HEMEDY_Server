@@ -11,6 +11,7 @@ import {
   DoctorSchedule,
   DoctorScheduleSchema,
 } from 'src/doctor-schedule/entities/doctor-schedule.entity';
+import { EmailService } from 'src/email/email.service';
 
 @Module({
   imports: [
@@ -22,6 +23,6 @@ import {
     ]),
   ],
   controllers: [TransactionController],
-  providers: [TransactionService, ConfigService, UserService],
+  providers: [TransactionService, ConfigService, UserService, EmailService],
 })
 export class TransactionModule {}

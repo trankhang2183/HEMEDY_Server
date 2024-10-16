@@ -138,6 +138,23 @@ export class SurveyService {
     return updatedSurvey;
   }
 
+  async updateSurveyIsDefault(surveyId: string): Promise<Survey> {
+    const survey = await this.surveyModel.findById(surveyId);
+    if (!survey) {
+      throw new NotFoundException(`Survey ${surveyId} not found`);
+    }
+
+    // updat others survey to false
+    await this.surveyModel.updateMany(
+      { _id: { $ne: surveyId } },
+      { $set: { is_default: false } },
+    );
+
+    survey.is_default = true;
+    const updatedSurvey = await survey.save();
+    return updatedSurvey;
+  }
+
   async deleteSurvey(surveyId: string): Promise<string> {
     const session = await this.connection.startSession();
     session.startTransaction();

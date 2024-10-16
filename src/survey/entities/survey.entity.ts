@@ -22,6 +22,13 @@ export class Survey {
   })
   @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Section' }] })
   section_list_id: Section[];
+
+  @ApiProperty({
+    description: 'Is Survey Default',
+    example: false,
+  })
+  @Prop({ required: true, default: false })
+  is_default: boolean;
 }
 
 export const SurveySchema = SchemaFactory.createForClass(Survey);

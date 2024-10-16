@@ -7,6 +7,7 @@ import {
   DoctorScheduleSchema,
 } from './entities/doctor-schedule.entity';
 import { User, UserSchema } from 'src/user/entities/user.entity';
+import { EmailService } from 'src/email/email.service';
 
 @Module({
   imports: [
@@ -16,6 +17,6 @@ import { User, UserSchema } from 'src/user/entities/user.entity';
     ]),
   ],
   controllers: [DoctorScheduleController],
-  providers: [DoctorScheduleService],
+  providers: [DoctorScheduleService, EmailService],
 })
 export class DoctorScheduleModule {}
