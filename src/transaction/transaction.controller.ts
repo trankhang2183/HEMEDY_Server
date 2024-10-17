@@ -252,14 +252,12 @@ export class TransactionController {
   async payProductByAccountBalance(
     @Body()
     payProductAccountBalanceTransactionDto: PayProductAccountBalanceTransactionDto,
-    @Res() response: Response,
     @GetUser() user: User,
-  ): Promise<any> {
-    const result = await this.transactionService.payProductByAccountBalance(
+  ): Promise<Transaction> {
+    return await this.transactionService.payProductByAccountBalance(
       user,
       payProductAccountBalanceTransactionDto,
     );
-    response.redirect(result.redirectUrl);
   }
 
   @ApiOperation({ summary: 'Pay Schedule By Account Balance' })
@@ -271,13 +269,11 @@ export class TransactionController {
   async payForScheduleByAccountBalance(
     @Body()
     payScheduleAccountBalanceTransactionDto: PayScheduleAccountBalanceTransactionDto,
-    @Res() response: Response,
     @GetUser() user: User,
-  ): Promise<any> {
-    const result = await this.transactionService.payForScheduleByAccountBalance(
+  ): Promise<Transaction> {
+    return await this.transactionService.payForScheduleByAccountBalance(
       user,
       payScheduleAccountBalanceTransactionDto,
     );
-    response.redirect(result.redirectUrl);
   }
 }

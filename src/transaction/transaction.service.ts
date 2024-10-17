@@ -283,6 +283,10 @@ export class TransactionService {
           product_type,
         });
         await transaction.save();
+
+        return {
+          redirectUrl: `https://hemedy.onrender.com/connection`,
+        };
       } else {
         const product_type = result.metadata.order_id.split('-')[3];
         transaction = new this.transactionModel({
@@ -668,6 +672,10 @@ export class TransactionService {
           product_type,
         });
         await transaction.save();
+
+        return {
+          redirectUrl: `https://hemedy.onrender.com/connection`,
+        };
       } else {
         const product_type = data.orderId.split('-')[3];
         transaction = new this.transactionModel({
@@ -1103,6 +1111,10 @@ export class TransactionService {
           product_type,
         });
         await transaction.save();
+
+        return {
+          redirectUrl: `https://hemedy.onrender.com/connection`,
+        };
       } else {
         const product_type = vnp_Params['vnp_OrderInfo'].split('-')[3];
         transaction = new this.transactionModel({
@@ -1126,7 +1138,7 @@ export class TransactionService {
   async payProductByAccountBalance(
     user: any,
     payProductAccountBalanceTransactionDto: PayProductAccountBalanceTransactionDto,
-  ) {
+  ): Promise<Transaction> {
     if (user.account_balance < payProductAccountBalanceTransactionDto.amount) {
       throw new BadGatewayException(
         'Số dư tài khoản không đủ để thực hiện thanh toán. Vui lòng chọn hình thức khác hoặc nạp tiền vào tài khoản!',
@@ -1153,15 +1165,13 @@ export class TransactionService {
       { new: true },
     );
 
-    return {
-      redirectUrl: `https://hemedy.onrender.com/account`,
-    };
+    return transaction;
   }
 
   async payForScheduleByAccountBalance(
     user: any,
     payScheduleAccountBalanceTransactionDto: PayScheduleAccountBalanceTransactionDto,
-  ) {
+  ): Promise<Transaction> {
     if (user.account_balance < payScheduleAccountBalanceTransactionDto.amount) {
       throw new BadGatewayException(
         'Số dư tài khoản không đủ để thực hiện thanh toán. Vui lòng chọn hình thức khác hoặc nạp tiền vào tài khoản!',
@@ -1236,9 +1246,7 @@ export class TransactionService {
     });
     await newDoctorSchedule.save();
 
-    return {
-      redirectUrl: `https://hemedy.onrender.com/account`,
-    };
+    return transaction;
   }
 
   async getAllCoursesOfUser(user: any): Promise<Transaction[]> {
