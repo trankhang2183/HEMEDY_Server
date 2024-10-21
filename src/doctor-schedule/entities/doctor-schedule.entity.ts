@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import { ScheduleSlotEnum } from '../enum/schedule-slot.enum';
 import { DoctorScheduleStatus } from '../enum/doctor-schedule-status.enum';
 import { User } from 'src/user/entities/user.entity';
+import { ScheduleExaminationFormEnum } from '../enum/examination-form.enum';
 
 export type DoctorScheduleDocument = mongoose.HydratedDocument<DoctorSchedule>;
 
@@ -40,11 +41,32 @@ export class DoctorSchedule {
   slot: ScheduleSlotEnum;
 
   @ApiProperty({
-    description: 'Appointment Slot',
+    description: 'Appointment Status',
     example: DoctorScheduleStatus.PENDING,
   })
   @Prop({ required: true })
   status: DoctorScheduleStatus;
+
+  @ApiProperty({
+    description: 'Appointment Examination Form',
+    example: ScheduleExaminationFormEnum.OFFLINE,
+  })
+  @Prop({ required: true })
+  examination_form: ScheduleExaminationFormEnum;
+
+  @ApiProperty({
+    description: 'Appointment Max Examination Session',
+    example: 8,
+  })
+  @Prop({ required: true })
+  max_examination_session: number;
+
+  @ApiProperty({
+    description: 'Appointment Examined Session',
+    example: 1,
+  })
+  @Prop({ required: true, default: 0 })
+  examined_session: number;
 }
 
 export const DoctorScheduleSchema =

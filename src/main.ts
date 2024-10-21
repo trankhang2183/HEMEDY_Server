@@ -23,9 +23,14 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, document);
 
-  new Server(app.getHttpServer());
+  new Server(app.getHttpServer(), {
+    cors: {
+      origin: '*',
+    },
+  });
 
   await app.listen(5000);
   Logger.log(`Application listening on port 5000`);
 }
+
 bootstrap();

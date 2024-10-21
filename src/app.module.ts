@@ -21,6 +21,9 @@ import { ConfigResultModule } from './config_result/config_result.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { EmailModule } from './email/email.module';
 import { AdminModule } from './admin/admin.module';
+import { CourseModule } from './course/course.module';
+import { NotificationModule } from './notification/notification.module';
+import { SocketGateway } from 'socket.gateway';
 
 @Module({
   imports: [
@@ -69,6 +72,9 @@ import { AdminModule } from './admin/admin.module';
     ConfigResultModule,
     EmailModule,
     AdminModule,
+    CourseModule,
+    NotificationModule,
+    SocketGateway,
   ],
 })
 export class AppModule {

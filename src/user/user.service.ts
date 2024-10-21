@@ -16,9 +16,6 @@ export class UserService {
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
 
-    @InjectModel(User.name)
-    private readonly roleModel: Model<Role>,
-
     @InjectModel(Role.name)
     private readonly roleRepository: Model<Role>,
   ) {}

@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsDateString, IsEnum, IsString } from 'class-validator';
 import { ScheduleSlotEnum } from '../enum/schedule-slot.enum';
+import { ScheduleExaminationFormEnum } from '../enum/examination-form.enum';
 
 export class CreateDoctorScheduleDto {
   @ApiProperty({
@@ -26,4 +27,12 @@ export class CreateDoctorScheduleDto {
   @IsNotEmpty()
   @IsEnum(ScheduleSlotEnum)
   slot: ScheduleSlotEnum;
+
+  @ApiProperty({
+    description: 'Appointment Examination Form',
+    example: ScheduleExaminationFormEnum.OFFLINE,
+  })
+  @IsNotEmpty()
+  @IsEnum(ScheduleExaminationFormEnum)
+  examination_form: ScheduleExaminationFormEnum;
 }

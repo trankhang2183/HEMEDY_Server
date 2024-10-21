@@ -6,6 +6,7 @@ import {
   IsDateString,
   IsEnum,
 } from 'class-validator';
+import { ScheduleExaminationFormEnum } from 'src/doctor-schedule/enum/examination-form.enum';
 import { ScheduleSlotEnum } from 'src/doctor-schedule/enum/schedule-slot.enum';
 
 export class PayScheduleAccountBalanceTransactionDto {
@@ -48,4 +49,12 @@ export class PayScheduleAccountBalanceTransactionDto {
   @IsNotEmpty()
   @IsEnum(ScheduleSlotEnum)
   slot: ScheduleSlotEnum;
+
+  @ApiProperty({
+    description: 'Appointment Examination Form',
+    example: ScheduleExaminationFormEnum.OFFLINE,
+  })
+  @IsNotEmpty()
+  @IsEnum(ScheduleExaminationFormEnum)
+  examination_form: ScheduleExaminationFormEnum;
 }

@@ -36,6 +36,12 @@ import { PayScheduleStripeTransactionDto } from './dto/pay-schedule-stripe-trans
 import { PayScheduleTransactionDto } from './dto/pay-schedule-momo-transaction.dto';
 import { PayScheduleAccountBalanceTransactionDto } from './dto/pay-schedule-account-balance-transaction.dto';
 import { EmailService } from 'src/email/email.service';
+import { ScheduleProductTypeEnum } from 'src/doctor-schedule/enum/product_type.enum';
+import { Course } from 'src/course/entities/course.entity';
+import { CreateNotificationDto } from 'src/notification/dto/create-notification.dto';
+import { NotificationTypeEnum } from 'src/notification/enum/notification-type.enum';
+import { RoleEnum } from 'src/role/enum/role.enum';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class TransactionService {
@@ -46,6 +52,8 @@ export class TransactionService {
 
     private readonly emailService: EmailService,
 
+    private readonly notificationService: NotificationService,
+
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
 
@@ -54,6 +62,9 @@ export class TransactionService {
 
     @InjectModel(DoctorSchedule.name)
     private readonly doctorScheduleModel: Model<DoctorScheduleDocument>,
+
+    @InjectModel(Course.name)
+    private readonly courseModel: Model<Course>,
   ) {
     this.stripe = new Stripe(
       this.configService.get<string>('STRIPE_SECRET_KEY'),
@@ -130,6 +141,15 @@ export class TransactionService {
     payProductTransactionDto: PayProductStripeTransactionDto,
     user: any,
   ): Promise<string> {
+    //Check exist Course
+    const existingCourse = await this.courseModel.findOne({
+      product_type: payProductTransactionDto.product_type,
+      user_id: user._id,
+    });
+    if (existingCourse) {
+      throw new BadGatewayException('Bạn đã mua khóa học này!');
+    }
+
     // Create Stripe checkout session
     try {
       const session = await this.stripe.checkout.sessions.create({
@@ -229,7 +249,7 @@ export class TransactionService {
             .toString()}2ad5ad23at3awe1-${new Date().getTime().toString()}-${
             payScheduleTransactionDto.product_type
           }`,
-          schedule_data: `${payScheduleTransactionDto.doctor_id}-${payScheduleTransactionDto.appointment_date}-${payScheduleTransactionDto.slot}`,
+          schedule_data: `${payScheduleTransactionDto.doctor_id}-${payScheduleTransactionDto.appointment_date}-${payScheduleTransactionDto.slot}-${payScheduleTransactionDto.examination_form}`,
         },
         mode: 'payment',
         expires_at: Math.floor(Date.now() / 1000) + 60 * 30, // Hết hạn sau 30 phút
@@ -340,11 +360,17 @@ export class TransactionService {
       const doctor_id = schedule_data[0];
       const appointment_date = schedule_data[1];
       const slot = schedule_data[2];
+      const examination_form = schedule_data[3];
       const newDoctorSchedule = new this.doctorScheduleModel({
         customer_id: user_id,
         doctor_id,
         appointment_date,
         slot,
+        examination_form,
+        max_examination_session:
+          product_type == ScheduleProductTypeEnum.BASIC_MEDICAL_EXAMINATION
+            ? 3
+            : 8,
         status: DoctorScheduleStatus.PENDING,
       });
       await newDoctorSchedule.save();
@@ -373,7 +399,36 @@ export class TransactionService {
         slot_email,
         doctor.fullname,
       );
+
+      //Push notification
+      //Notification to admin
+      const admin = await this.userModel.findOne({
+        role_name: RoleEnum.ADMIN,
+      });
+      const createNotificationAdminDto: CreateNotificationDto =
+        new CreateNotificationDto(
+          NotificationTypeEnum.PAY_SCHEDULED,
+          `Đã có khách hàng đặt lịch hẹn khám mới`,
+          admin.email,
+        );
+
+      await this.notificationService.createNotification(
+        createNotificationAdminDto,
+      );
+
+      // Notification to doctor
+      const createNotificationDoctorDto: CreateNotificationDto =
+        new CreateNotificationDto(
+          NotificationTypeEnum.PAY_SCHEDULED,
+          `Đã có khách hàng đặt lịch hẹn khám mới`,
+          doctor.email,
+        );
+
+      await this.notificationService.createNotification(
+        createNotificationDoctorDto,
+      );
     } else {
+      //Create Transaction
       const product_type = result.metadata.order_id.split('-')[3];
       transaction = new this.transactionModel({
         user_id,
@@ -385,6 +440,26 @@ export class TransactionService {
         product_type,
       });
       await transaction.save();
+
+      //Create Course
+      const createdCourse = new this.courseModel({
+        product_type,
+        user_id,
+      });
+      await createdCourse.save();
+
+      //Create Notification
+      const admin = await this.userModel.findOne({
+        role_name: RoleEnum.ADMIN,
+      });
+      const createNotificationDto: CreateNotificationDto =
+        new CreateNotificationDto(
+          NotificationTypeEnum.PAY_PRODUCT,
+          `Đã có khách hàng mua khóa học`,
+          admin.email,
+        );
+
+      await this.notificationService.createNotification(createNotificationDto);
     }
 
     return {
@@ -468,6 +543,15 @@ export class TransactionService {
     payProductTransactionDto: PayProductTransactionDto,
     user: any,
   ): Promise<string> {
+    //Check exist Course
+    const existingCourse = await this.courseModel.findOne({
+      product_type: payProductTransactionDto.product_type,
+      user_id: user._id,
+    });
+    if (existingCourse) {
+      throw new BadGatewayException('Bạn đã mua khóa học này!');
+    }
+
     // create momo url
     const partnerCode: string = this.configService.get('PartnerCode');
     const accessKey: string = this.configService.get('AccessKey');
@@ -583,7 +667,9 @@ export class TransactionService {
     }`;
     const requestId = `${payScheduleTransactionDto.doctor_id}-${
       payScheduleTransactionDto.appointment_date
-    }-${payScheduleTransactionDto.slot}-${new Date().getTime().toString()}`;
+    }-${payScheduleTransactionDto.slot}-${
+      payScheduleTransactionDto.examination_form
+    }-${new Date().getTime().toString()}`;
     const orderInfo = `${payScheduleTransactionDto.name}`;
     const requestType = 'captureWallet';
     const extraData = '';
@@ -729,11 +815,17 @@ export class TransactionService {
       const doctor_id = schedule_data[0];
       const appointment_date = schedule_data[1];
       const slot = schedule_data[2];
+      const examination_form = schedule_data[3];
       const newDoctorSchedule = new this.doctorScheduleModel({
         customer_id: user_id,
         doctor_id,
         appointment_date,
         slot,
+        examination_form,
+        max_examination_session:
+          product_type == ScheduleProductTypeEnum.BASIC_MEDICAL_EXAMINATION
+            ? 3
+            : 8,
         status: DoctorScheduleStatus.PENDING,
       });
       await newDoctorSchedule.save();
@@ -762,6 +854,34 @@ export class TransactionService {
         slot_email,
         doctor.fullname,
       );
+
+      //Push notification
+      //Notification to admin
+      const admin = await this.userModel.findOne({
+        role_name: RoleEnum.ADMIN,
+      });
+      const createNotificationAdminDto: CreateNotificationDto =
+        new CreateNotificationDto(
+          NotificationTypeEnum.PAY_SCHEDULED,
+          `Đã có khách hàng đặt lịch hẹn khám mới`,
+          admin.email,
+        );
+
+      await this.notificationService.createNotification(
+        createNotificationAdminDto,
+      );
+
+      // Notification to doctor
+      const createNotificationDoctorDto: CreateNotificationDto =
+        new CreateNotificationDto(
+          NotificationTypeEnum.PAY_SCHEDULED,
+          `Đã có khách hàng đặt lịch hẹn khám mới`,
+          doctor.email,
+        );
+
+      await this.notificationService.createNotification(
+        createNotificationDoctorDto,
+      );
     } else {
       const product_type = data.orderId.split('-')[3];
       transaction = new this.transactionModel({
@@ -774,6 +894,26 @@ export class TransactionService {
         product_type,
       });
       await transaction.save();
+
+      //Create Course
+      const createdCourse = new this.courseModel({
+        product_type,
+        user_id,
+      });
+      await createdCourse.save();
+
+      //Push Notification
+      const admin = await this.userModel.findOne({
+        role_name: RoleEnum.ADMIN,
+      });
+      const createNotificationDto: CreateNotificationDto =
+        new CreateNotificationDto(
+          NotificationTypeEnum.PAY_PRODUCT,
+          `Đã có khách hàng mua khóa học`,
+          admin.email,
+        );
+
+      await this.notificationService.createNotification(createNotificationDto);
     }
 
     return {
@@ -841,6 +981,15 @@ export class TransactionService {
     user: any,
     req: Request,
   ): Promise<string> {
+    //Check exist Course
+    const existingCourse = await this.courseModel.findOne({
+      product_type: payProductTransactionDto.product_type,
+      user_id: user._id,
+    });
+    if (existingCourse) {
+      throw new BadGatewayException('Bạn đã mua khóa học này!');
+    }
+
     // create vnpay url
     const ipAddr = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
@@ -949,7 +1098,9 @@ export class TransactionService {
     }`;
     const orderType = `${payScheduleTransactionDto.doctor_id}-${
       payScheduleTransactionDto.appointment_date
-    }-${payScheduleTransactionDto.slot}-${new Date().getTime().toString()}`;
+    }-${payScheduleTransactionDto.slot}-${
+      payScheduleTransactionDto.examination_form
+    }-${new Date().getTime().toString()}`;
     const locale = 'vn';
 
     const currCode = 'VND';
@@ -1036,11 +1187,17 @@ export class TransactionService {
         const doctor_id = schedule_data[0];
         const appointment_date = schedule_data[1];
         const slot = schedule_data[2];
+        const examination_form = schedule_data[3];
         const newDoctorSchedule = new this.doctorScheduleModel({
           customer_id: user_id,
           doctor_id,
           appointment_date,
           slot,
+          examination_form,
+          max_examination_session:
+            product_type == ScheduleProductTypeEnum.BASIC_MEDICAL_EXAMINATION
+              ? 3
+              : 8,
           status: DoctorScheduleStatus.PENDING,
         });
         await newDoctorSchedule.save();
@@ -1069,6 +1226,34 @@ export class TransactionService {
           slot_email,
           doctor.fullname,
         );
+
+        //Push notification
+        //Notification to admin
+        const admin = await this.userModel.findOne({
+          role_name: RoleEnum.ADMIN,
+        });
+        const createNotificationAdminDto: CreateNotificationDto =
+          new CreateNotificationDto(
+            NotificationTypeEnum.PAY_SCHEDULED,
+            `Đã có khách hàng đặt lịch hẹn khám mới`,
+            admin.email,
+          );
+
+        await this.notificationService.createNotification(
+          createNotificationAdminDto,
+        );
+
+        // Notification to doctor
+        const createNotificationDoctorDto: CreateNotificationDto =
+          new CreateNotificationDto(
+            NotificationTypeEnum.PAY_SCHEDULED,
+            `Đã có khách hàng đặt lịch hẹn khám mới`,
+            doctor.email,
+          );
+
+        await this.notificationService.createNotification(
+          createNotificationDoctorDto,
+        );
       } else {
         const product_type = vnp_Params['vnp_OrderInfo'].split('-')[3];
         transaction = new this.transactionModel({
@@ -1081,6 +1266,28 @@ export class TransactionService {
           product_type,
         });
         await transaction.save();
+
+        //Create Course
+        const createdCourse = new this.courseModel({
+          product_type,
+          user_id,
+        });
+        await createdCourse.save();
+
+        //Create Notification
+        const admin = await this.userModel.findOne({
+          role_name: RoleEnum.ADMIN,
+        });
+        const createNotificationDto: CreateNotificationDto =
+          new CreateNotificationDto(
+            NotificationTypeEnum.PAY_PRODUCT,
+            `Đã có khách hàng mua khóa học`,
+            admin.email,
+          );
+
+        await this.notificationService.createNotification(
+          createNotificationDto,
+        );
       }
 
       return {
@@ -1139,6 +1346,15 @@ export class TransactionService {
     user: any,
     payProductAccountBalanceTransactionDto: PayProductAccountBalanceTransactionDto,
   ): Promise<Transaction> {
+    //Check exist Course
+    const existingCourse = await this.courseModel.findOne({
+      product_type: payProductAccountBalanceTransactionDto.product_type,
+      user_id: user._id,
+    });
+    if (existingCourse) {
+      throw new BadGatewayException('Bạn đã mua khóa học này!');
+    }
+
     if (user.account_balance < payProductAccountBalanceTransactionDto.amount) {
       throw new BadGatewayException(
         'Số dư tài khoản không đủ để thực hiện thanh toán. Vui lòng chọn hình thức khác hoặc nạp tiền vào tài khoản!',
@@ -1164,6 +1380,26 @@ export class TransactionService {
       { account_balance: new_balance },
       { new: true },
     );
+
+    //Create Course
+    const createdCourse = new this.courseModel({
+      product_type: payProductAccountBalanceTransactionDto.product_type,
+      user_id: user._id,
+    });
+    await createdCourse.save();
+
+    //Create Notification
+    const admin = await this.userModel.findOne({
+      role_name: RoleEnum.ADMIN,
+    });
+    const createNotificationDto: CreateNotificationDto =
+      new CreateNotificationDto(
+        NotificationTypeEnum.PAY_PRODUCT,
+        `Đã có khách hàng mua khóa học`,
+        admin.email,
+      );
+
+    await this.notificationService.createNotification(createNotificationDto);
 
     return transaction;
   }
@@ -1237,14 +1473,70 @@ export class TransactionService {
     const appointment_date =
       payScheduleAccountBalanceTransactionDto.appointment_date;
     const slot = payScheduleAccountBalanceTransactionDto.slot;
+    const examination_form =
+      payScheduleAccountBalanceTransactionDto.examination_form;
     const newDoctorSchedule = new this.doctorScheduleModel({
       customer_id: user._id,
       doctor_id,
       appointment_date,
       slot,
+      examination_form,
+      max_examination_session:
+        payScheduleAccountBalanceTransactionDto.product_type ==
+        ScheduleProductTypeEnum.BASIC_MEDICAL_EXAMINATION
+          ? 3
+          : 8,
       status: DoctorScheduleStatus.PENDING,
     });
     await newDoctorSchedule.save();
+
+    //Send mail for customer
+    const appointment_date_email =
+      moment(appointment_date).format('DD-MM-YYYY');
+    const slot_email = `${
+      Number.parseInt(scheduleTime) >= 12
+        ? `${Number.parseInt(scheduleTime)}h30`
+        : `${Number.parseInt(scheduleTime)}h`
+    }-${
+      Number.parseInt(scheduleTime) >= 12
+        ? `${Number.parseInt(scheduleTime) + 1}h30`
+        : `${Number.parseInt(scheduleTime) + 1}h`
+    }`;
+    await this.emailService.sendMailWhenScheduleSuccess(
+      user.email,
+      user.fullname,
+      appointment_date_email,
+      slot_email,
+      doctor.fullname,
+    );
+
+    //Push notification
+    //Notification to admin
+    const admin = await this.userModel.findOne({
+      role_name: RoleEnum.ADMIN,
+    });
+    const createNotificationAdminDto: CreateNotificationDto =
+      new CreateNotificationDto(
+        NotificationTypeEnum.PAY_SCHEDULED,
+        `Đã có khách hàng đặt lịch hẹn khám mới`,
+        admin.email,
+      );
+
+    await this.notificationService.createNotification(
+      createNotificationAdminDto,
+    );
+
+    // Notification to doctor
+    const createNotificationDoctorDto: CreateNotificationDto =
+      new CreateNotificationDto(
+        NotificationTypeEnum.PAY_SCHEDULED,
+        `Đã có khách hàng đặt lịch hẹn khám mới`,
+        doctor.email,
+      );
+
+    await this.notificationService.createNotification(
+      createNotificationDoctorDto,
+    );
 
     return transaction;
   }

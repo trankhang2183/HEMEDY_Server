@@ -128,14 +128,21 @@ export class DoctorScheduleController {
   @UseGuards(JwtGuard)
   @ApiOperation({ summary: 'Doctor complete a doctor schedule by ID' })
   @ApiResponse({ status: 200, description: 'The doctor schedule details.' })
-  @ApiResponse({
-    status: 400,
-    description:
-      'Schedule must be cancel before 2 hours from appointment time.',
-  })
   @ApiResponse({ status: 404, description: 'Doctor schedule not found.' })
   doctorCompleteSchedule(@GetUser() user: any, @Param('id') id: string) {
     return this.doctorScheduleService.doctorCompleteSchedule(id, user);
+  }
+
+  @Patch('/doctor/examined/:id')
+  @Roles(RoleEnum.DOCTOR)
+  @UseGuards(RolesGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtGuard)
+  @ApiOperation({ summary: 'Doctor check examined a doctor schedule by ID' })
+  @ApiResponse({ status: 200, description: 'The doctor schedule details.' })
+  @ApiResponse({ status: 404, description: 'Doctor schedule not found.' })
+  doctorCheckExaminedSchedule(@GetUser() user: any, @Param('id') id: string) {
+    return this.doctorScheduleService.doctorCheckExaminedSchedule(id, user);
   }
 
   @Delete(':id')

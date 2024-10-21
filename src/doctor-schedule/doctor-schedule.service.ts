@@ -309,6 +309,24 @@ export class DoctorScheduleService {
     return updatedDoctorSchedule;
   }
 
+  async doctorCheckExaminedSchedule(
+    id: string,
+    doctor: any,
+  ): Promise<DoctorSchedule> {
+    const schedule = await this.doctorScheduleModel
+      .findOne({ doctor_id: doctor._id, _id: id })
+      .exec();
+
+    if (!schedule) {
+      throw new NotFoundException(`DoctorSchedule not found`);
+    }
+
+    schedule.examined_session += 1;
+    await schedule.save();
+
+    return schedule;
+  }
+
   //Admin Only
   async removeDoctorSchedule(id: string): Promise<string> {
     const result = await this.doctorScheduleModel.findByIdAndDelete(id).exec();
