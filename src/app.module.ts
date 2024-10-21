@@ -23,7 +23,7 @@ import { EmailModule } from './email/email.module';
 import { AdminModule } from './admin/admin.module';
 import { CourseModule } from './course/course.module';
 import { NotificationModule } from './notification/notification.module';
-import { SocketGateway } from 'socket.gateway';
+import { SocketGateway } from 'src/utils/socket.gateway';
 
 @Module({
   imports: [

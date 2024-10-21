@@ -10,7 +10,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Notification } from './entities/notification.entity';
 import { Model } from 'mongoose';
 import { UserService } from 'src/user/user.service';
-import { SocketGateway } from 'socket.gateway';
+import { SocketGateway } from 'src/utils/socket.gateway';
 
 @Injectable()
 export class NotificationService {
