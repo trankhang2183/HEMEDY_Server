@@ -67,6 +67,12 @@ export class DoctorSchedule {
   })
   @Prop({ required: true, default: 0 })
   examined_session: number;
+
+  @Prop()
+  createdAt?: Date;
+
+  @Prop()
+  updatedAt?: Date;
 }
 
 export const DoctorScheduleSchema =

@@ -35,6 +35,12 @@ export class Result {
   })
   @Prop({ required: true, unique: true })
   user_id: mongoose.Types.ObjectId;
+
+  @Prop()
+  createdAt?: Date;
+
+  @Prop()
+  updatedAt?: Date;
 }
 
 export const ResultSchema = SchemaFactory.createForClass(Result);

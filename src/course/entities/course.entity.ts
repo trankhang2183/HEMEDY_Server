@@ -19,6 +19,12 @@ export class Course extends Document {
   })
   @Prop({ unique: true, required: true })
   product_type: string;
+
+  @Prop()
+  createdAt?: Date;
+
+  @Prop()
+  updatedAt?: Date;
 }
 
 export const CourseSchema = SchemaFactory.createForClass(Course);

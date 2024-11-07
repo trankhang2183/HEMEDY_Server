@@ -29,6 +29,12 @@ export class Question {
   })
   @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Answer' }] })
   answer_list_id: Answer[];
+
+  @Prop()
+  createdAt?: Date;
+
+  @Prop()
+  updatedAt?: Date;
 }
 
 export const QuestionSchema = SchemaFactory.createForClass(Question);

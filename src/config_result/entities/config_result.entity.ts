@@ -35,6 +35,12 @@ export class ConfigResult {
   })
   @Prop({ required: true })
   suggestion: string;
+
+  @Prop()
+  createdAt?: Date;
+
+  @Prop()
+  updatedAt?: Date;
 }
 
 export const ConfigResultSchema = SchemaFactory.createForClass(ConfigResult);

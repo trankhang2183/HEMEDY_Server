@@ -42,6 +42,12 @@ export class Blog {
   })
   @Prop()
   representative_img: string;
+
+  @Prop()
+  createdAt?: Date;
+
+  @Prop()
+  updatedAt?: Date;
 }
 
 export const BlogSchema = SchemaFactory.createForClass(Blog);

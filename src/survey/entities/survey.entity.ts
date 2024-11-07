@@ -29,6 +29,12 @@ export class Survey {
   })
   @Prop({ required: true, default: false })
   is_default: boolean;
+
+  @Prop()
+  createdAt?: Date;
+
+  @Prop()
+  updatedAt?: Date;
 }
 
 export const SurveySchema = SchemaFactory.createForClass(Survey);

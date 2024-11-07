@@ -29,9 +29,7 @@ export class NotificationService {
     if (!receiver.status) {
       throw new BadGatewayException('Tài khoản nhận thông báo không hoạt động');
     }
-    const notification = await this.notificationRepository.create(
-      createNotificationDto,
-    );
+    const notification = new this.notificationRepository(createNotificationDto);
     if (!notification) {
       throw new BadGatewayException('Có lỗi xảy ra khi tạo thông báo mới');
     }

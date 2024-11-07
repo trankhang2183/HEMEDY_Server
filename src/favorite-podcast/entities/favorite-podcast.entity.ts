@@ -27,6 +27,12 @@ export class FavoritePodcast {
     required: true,
   })
   podcast_list_id: Podcast[];
+
+  @Prop()
+  createdAt?: Date;
+
+  @Prop()
+  updatedAt?: Date;
 }
 
 export const FavoritePodcastSchema =

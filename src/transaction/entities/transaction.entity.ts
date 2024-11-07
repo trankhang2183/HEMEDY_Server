@@ -57,6 +57,12 @@ export class Transaction {
   })
   @Prop({ required: false })
   product_type: string;
+
+  @Prop()
+  createdAt?: Date;
+
+  @Prop()
+  updatedAt?: Date;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);

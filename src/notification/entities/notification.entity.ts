@@ -21,6 +21,12 @@ export class Notification {
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true })
   receiver_id: User;
+
+  @Prop()
+  createdAt?: Date;
+
+  @Prop()
+  updatedAt?: Date;
 }
 
 export const NotificationSchema = SchemaFactory.createForClass(Notification);

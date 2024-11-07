@@ -22,4 +22,36 @@ export class AdminController {
   createPodcast(): Promise<any> {
     return this.adminService.statisticForAdmin();
   }
+
+  @ApiOperation({
+    summary: 'Get Statistic Date Sales',
+  })
+  @Get('statistic-date-sales')
+  statisticDateSales(): Promise<any> {
+    return this.adminService.statisticDateSales();
+  }
+
+  @ApiOperation({
+    summary: 'Get Statistic Top Services',
+  })
+  @Get('statistic-top-services')
+  statisticTopService(): Promise<any> {
+    return this.adminService.statisticTopService();
+  }
+
+  @ApiOperation({
+    summary: 'Get Statistic Revenue Monthly',
+  })
+  @Get('statistic-revenue-monthly')
+  statisticRevenueForMonth(): Promise<any> {
+    return this.adminService.statisticRevenueForMonth();
+  }
+
+  @ApiOperation({
+    summary: 'Get Statistic Revenue Current Week',
+  })
+  @Get('statistic-revenue-current-week')
+  statisticRevenueForCurrentWeek(): Promise<any> {
+    return this.adminService.statisticRevenueForCurrentWeek();
+  }
 }

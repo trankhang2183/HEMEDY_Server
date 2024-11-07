@@ -65,6 +65,12 @@ export class Podcast {
   })
   @Prop({ default: 0 })
   favorite_quantity: number;
+
+  @Prop()
+  createdAt?: Date;
+
+  @Prop()
+  updatedAt?: Date;
 }
 
 export const PodcastSchema = SchemaFactory.createForClass(Podcast);

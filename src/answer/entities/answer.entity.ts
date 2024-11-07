@@ -21,6 +21,12 @@ export class Answer {
   })
   @Prop({ unique: true })
   score: number;
+
+  @Prop()
+  createdAt?: Date;
+
+  @Prop()
+  updatedAt?: Date;
 }
 
 export const AnswerSchema = SchemaFactory.createForClass(Answer);
