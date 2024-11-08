@@ -9,6 +9,7 @@ import { Role, RoleSchema } from 'src/role/entities/role.entity';
 import { UserService } from 'src/user/user.service';
 import { RoleService } from 'src/role/role.service';
 import { MongooseModule } from '@nestjs/mongoose';
+import { DomainModel, DomainSchema } from './entities/domain.entity';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { MongooseModule } from '@nestjs/mongoose';
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: Role.name, schema: RoleSchema },
+      { name: DomainModel.name, schema: DomainSchema },
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -20,6 +20,8 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpRoleAccountDto } from './dto/upRole-account.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { DomainModel } from './entities/domain.entity';
+import { DomainEnum } from './enum/domain.enum';
 
 @Injectable()
 export class AuthService {
@@ -29,6 +31,9 @@ export class AuthService {
 
     @InjectModel(Role.name)
     private readonly roleRepository: Model<Role>,
+
+    @InjectModel(DomainModel.name)
+    private readonly domainRepository: Model<DomainModel>,
 
     private readonly jwtService: JwtService,
 
@@ -398,6 +403,376 @@ export class AuthService {
       return result;
     } catch (error) {
       throw new InternalServerErrorException(error.message);
+    }
+  }
+
+  async increaseQuantityUserVisit(): Promise<DomainModel> {
+    let domain = await this.domainRepository.findOne();
+    if (!domain) {
+      domain = new this.domainRepository();
+    }
+
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    let isExist = false;
+    switch (currentMonth) {
+      case 9: {
+        domain.Sep = domain.Sep.map((Sep) => {
+          if (Sep.type === DomainEnum.VISIT) {
+            isExist = true;
+            return { ...Sep, quantity: Sep.quantity + 1 };
+          }
+          return Sep;
+        });
+
+        if (!isExist) {
+          domain.Sep.push({
+            type: DomainEnum.VISIT,
+            quantity: 1,
+          });
+        }
+
+        await domain.save();
+        return domain;
+        break;
+      }
+      case 10: {
+        domain.Oct = domain.Oct.map((Oct) => {
+          if (Oct.type === DomainEnum.VISIT) {
+            isExist = true;
+            return { ...Oct, quantity: Oct.quantity + 1 };
+          }
+          return Oct;
+        });
+
+        if (!isExist) {
+          domain.Sep.push({
+            type: DomainEnum.VISIT,
+            quantity: 1,
+          });
+        }
+
+        await domain.save();
+        return domain;
+        break;
+      }
+      case 11: {
+        domain.Nov = domain.Nov.map((Nov) => {
+          if (Nov.type === DomainEnum.VISIT) {
+            isExist = true;
+            return { ...Nov, quantity: Nov.quantity + 1 };
+          }
+          return Nov;
+        });
+
+        if (!isExist) {
+          domain.Nov.push({
+            type: DomainEnum.VISIT,
+            quantity: 1,
+          });
+        }
+
+        await domain.save();
+        return domain;
+        break;
+      }
+      case 12: {
+        domain.Dec = domain.Dec.map((Dec) => {
+          if (Dec.type === DomainEnum.VISIT) {
+            isExist = true;
+            return { ...Dec, quantity: Dec.quantity + 1 };
+          }
+          return Dec;
+        });
+
+        if (!isExist) {
+          domain.Dec.push({
+            type: DomainEnum.VISIT,
+            quantity: 1,
+          });
+        }
+
+        await domain.save();
+        return domain;
+        break;
+      }
+    }
+  }
+
+  async increaseQuantityListenMusic(): Promise<DomainModel> {
+    let domain = await this.domainRepository.findOne();
+    if (!domain) {
+      domain = new this.domainRepository();
+    }
+
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    let isExist = false;
+    switch (currentMonth) {
+      case 9: {
+        domain.Sep = domain.Sep.map((Sep) => {
+          if (Sep.type === DomainEnum.MUSIC) {
+            isExist = true;
+            return { ...Sep, quantity: Sep.quantity + 1 };
+          }
+          return Sep;
+        });
+
+        if (!isExist) {
+          domain.Sep.push({
+            type: DomainEnum.MUSIC,
+            quantity: 1,
+          });
+        }
+
+        await domain.save();
+        return domain;
+        break;
+      }
+      case 10: {
+        domain.Oct = domain.Oct.map((Oct) => {
+          if (Oct.type === DomainEnum.MUSIC) {
+            isExist = true;
+            return { ...Oct, quantity: Oct.quantity + 1 };
+          }
+          return Oct;
+        });
+
+        if (!isExist) {
+          domain.Sep.push({
+            type: DomainEnum.MUSIC,
+            quantity: 1,
+          });
+        }
+
+        await domain.save();
+        return domain;
+        break;
+      }
+      case 11: {
+        domain.Nov = domain.Nov.map((Nov) => {
+          if (Nov.type === DomainEnum.MUSIC) {
+            isExist = true;
+            return { ...Nov, quantity: Nov.quantity + 1 };
+          }
+          return Nov;
+        });
+
+        if (!isExist) {
+          domain.Nov.push({
+            type: DomainEnum.MUSIC,
+            quantity: 1,
+          });
+        }
+
+        await domain.save();
+        return domain;
+        break;
+      }
+      case 12: {
+        domain.Dec = domain.Dec.map((Dec) => {
+          if (Dec.type === DomainEnum.MUSIC) {
+            isExist = true;
+            return { ...Dec, quantity: Dec.quantity + 1 };
+          }
+          return Dec;
+        });
+
+        if (!isExist) {
+          domain.Dec.push({
+            type: DomainEnum.MUSIC,
+            quantity: 1,
+          });
+        }
+
+        await domain.save();
+        return domain;
+        break;
+      }
+    }
+  }
+
+  async increaseQuantityListenPodcast(): Promise<DomainModel> {
+    let domain = await this.domainRepository.findOne();
+    if (!domain) {
+      domain = new this.domainRepository();
+    }
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    let isExist = false;
+    switch (currentMonth) {
+      case 9: {
+        domain.Sep = domain.Sep.map((Sep) => {
+          if (Sep.type === DomainEnum.PODCAST) {
+            isExist = true;
+            return { ...Sep, quantity: Sep.quantity + 1 };
+          }
+          return Sep;
+        });
+
+        if (!isExist) {
+          domain.Sep.push({
+            type: DomainEnum.PODCAST,
+            quantity: 1,
+          });
+        }
+
+        await domain.save();
+        return domain;
+        break;
+      }
+      case 10: {
+        domain.Oct = domain.Oct.map((Oct) => {
+          if (Oct.type === DomainEnum.PODCAST) {
+            isExist = true;
+            return { ...Oct, quantity: Oct.quantity + 1 };
+          }
+          return Oct;
+        });
+
+        if (!isExist) {
+          domain.Sep.push({
+            type: DomainEnum.PODCAST,
+            quantity: 1,
+          });
+        }
+
+        await domain.save();
+        return domain;
+        break;
+      }
+      case 11: {
+        domain.Nov = domain.Nov.map((Nov) => {
+          if (Nov.type === DomainEnum.PODCAST) {
+            isExist = true;
+            return { ...Nov, quantity: Nov.quantity + 1 };
+          }
+          return Nov;
+        });
+
+        if (!isExist) {
+          domain.Nov.push({
+            type: DomainEnum.PODCAST,
+            quantity: 1,
+          });
+        }
+
+        await domain.save();
+        return domain;
+        break;
+      }
+      case 12: {
+        domain.Dec = domain.Dec.map((Dec) => {
+          if (Dec.type === DomainEnum.PODCAST) {
+            isExist = true;
+            return { ...Dec, quantity: Dec.quantity + 1 };
+          }
+          return Dec;
+        });
+
+        if (!isExist) {
+          domain.Dec.push({
+            type: DomainEnum.PODCAST,
+            quantity: 1,
+          });
+        }
+
+        await domain.save();
+        return domain;
+        break;
+      }
+    }
+  }
+
+  async increaseQuantityTakeSurvey(): Promise<DomainModel> {
+    let domain = await this.domainRepository.findOne();
+    if (!domain) {
+      domain = new this.domainRepository();
+    }
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    let isExist = false;
+    switch (currentMonth) {
+      case 9: {
+        domain.Sep = domain.Sep.map((Sep) => {
+          if (Sep.type === DomainEnum.SURVEY) {
+            isExist = true;
+            return { ...Sep, quantity: Sep.quantity + 1 };
+          }
+          return Sep;
+        });
+
+        if (!isExist) {
+          domain.Sep.push({
+            type: DomainEnum.SURVEY,
+            quantity: 1,
+          });
+        }
+
+        await domain.save();
+        return domain;
+        break;
+      }
+      case 10: {
+        domain.Oct = domain.Oct.map((Oct) => {
+          if (Oct.type === DomainEnum.SURVEY) {
+            isExist = true;
+            return { ...Oct, quantity: Oct.quantity + 1 };
+          }
+          return Oct;
+        });
+
+        if (!isExist) {
+          domain.Sep.push({
+            type: DomainEnum.SURVEY,
+            quantity: 1,
+          });
+        }
+
+        await domain.save();
+        return domain;
+        break;
+      }
+      case 11: {
+        domain.Nov = domain.Nov.map((Nov) => {
+          if (Nov.type === DomainEnum.SURVEY) {
+            isExist = true;
+            return { ...Nov, quantity: Nov.quantity + 1 };
+          }
+          return Nov;
+        });
+
+        if (!isExist) {
+          domain.Nov.push({
+            type: DomainEnum.SURVEY,
+            quantity: 1,
+          });
+        }
+
+        await domain.save();
+        return domain;
+        break;
+      }
+      case 12: {
+        domain.Dec = domain.Dec.map((Dec) => {
+          if (Dec.type === DomainEnum.SURVEY) {
+            isExist = true;
+            return { ...Dec, quantity: Dec.quantity + 1 };
+          }
+          return Dec;
+        });
+
+        if (!isExist) {
+          domain.Dec.push({
+            type: DomainEnum.SURVEY,
+            quantity: 1,
+          });
+        }
+
+        await domain.save();
+        return domain;
+        break;
+      }
     }
   }
 }

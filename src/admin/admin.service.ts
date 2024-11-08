@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { DomainModel } from 'src/auth/entities/domain.entity';
+import { DomainEnum } from 'src/auth/enum/domain.enum';
 import { Blog } from 'src/blog/entities/blog.entity';
 import { Course } from 'src/course/entities/course.entity';
 import { DoctorSchedule } from 'src/doctor-schedule/entities/doctor-schedule.entity';
@@ -9,6 +11,7 @@ import { Podcast } from 'src/podcast/entities/podcast.entity';
 import { PodcastCategoryEnum } from 'src/podcast/enum/podcast-category.enum';
 import { Survey } from 'src/survey/entities/survey.entity';
 import { Transaction } from 'src/transaction/entities/transaction.entity';
+import { TransactionTypeEnum } from 'src/transaction/enum/transaction-type.enum';
 import { User } from 'src/user/entities/user.entity';
 import { Workshop } from 'src/workshop/entities/workshop.entity';
 
@@ -25,6 +28,8 @@ export class AdminService {
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @InjectModel(DoctorSchedule.name)
     private readonly doctorScheduleModel: Model<DoctorSchedule>,
+    @InjectModel(DomainModel.name)
+    private readonly domainModel: Model<DomainModel>,
   ) {}
 
   async statisticForAdmin(): Promise<any> {
@@ -43,89 +48,141 @@ export class AdminService {
     return result;
   }
 
-  async statisticDateSales(): Promise<any> {
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const endOfToday = new Date();
-    endOfToday.setHours(23, 59, 59, 999);
+  async statisticSales(param: string): Promise<any> {
+    const now = new Date();
+    let startOfPeriod: Date,
+      endOfPeriod: Date,
+      startOfPreviousPeriod: Date,
+      endOfPreviousPeriod: Date;
 
-    const startOfYesterday = new Date(
-      startOfToday.getTime() - 24 * 60 * 60 * 1000,
+    switch (param) {
+      case 'today':
+        startOfPeriod = new Date(now);
+        startOfPeriod.setHours(0, 0, 0, 0);
+        endOfPeriod = new Date(now);
+        endOfPeriod.setHours(23, 59, 59, 999);
+
+        startOfPreviousPeriod = new Date(startOfPeriod);
+        startOfPreviousPeriod.setDate(startOfPreviousPeriod.getDate() - 1);
+        endOfPreviousPeriod = new Date(endOfPeriod);
+        endOfPreviousPeriod.setDate(endOfPreviousPeriod.getDate() - 1);
+        break;
+
+      case 'week':
+        startOfPeriod = new Date(now);
+        startOfPeriod.setDate(
+          now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1),
+        );
+        startOfPeriod.setHours(0, 0, 0, 0);
+
+        endOfPeriod = new Date(now);
+        endOfPeriod.setHours(23, 59, 59, 999);
+
+        startOfPreviousPeriod = new Date(startOfPeriod);
+        startOfPreviousPeriod.setDate(startOfPreviousPeriod.getDate() - 7);
+
+        endOfPreviousPeriod = new Date(startOfPreviousPeriod);
+        endOfPreviousPeriod.setDate(endOfPreviousPeriod.getDate() + 6);
+        endOfPreviousPeriod.setHours(23, 59, 59, 999);
+        break;
+      case 'month':
+        startOfPeriod = new Date(now.getFullYear(), now.getMonth(), 1);
+        endOfPeriod = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        endOfPeriod.setHours(23, 59, 59, 999);
+
+        startOfPreviousPeriod = new Date(
+          now.getFullYear(),
+          now.getMonth() - 1,
+          1,
+        );
+        endOfPreviousPeriod = new Date(now.getFullYear(), now.getMonth(), 0);
+        endOfPreviousPeriod.setHours(23, 59, 59, 999);
+        break;
+
+      case 'year':
+        startOfPeriod = new Date(now.getFullYear(), 0, 1);
+        endOfPeriod = new Date(now.getFullYear(), 11, 31);
+        endOfPeriod.setHours(23, 59, 59, 999);
+
+        startOfPreviousPeriod = new Date(now.getFullYear() - 1, 0, 1);
+        endOfPreviousPeriod = new Date(now.getFullYear() - 1, 11, 31);
+        endOfPreviousPeriod.setHours(23, 59, 59, 999);
+        break;
+
+      default:
+        throw new Error('Invalid parameter');
+    }
+
+    const totalTransactionCurrent = await this.transactionModel.find({
+      createdAt: { $gte: startOfPeriod, $lte: endOfPeriod },
+    });
+    let totalIncomeCurrent = 0;
+    totalTransactionCurrent.forEach(
+      (transaction) => (totalIncomeCurrent += transaction.amount),
     );
-    const endOfYesterday = new Date(
-      startOfYesterday.getTime() + 24 * 60 * 60 * 1000 - 1,
+
+    const totalTransactionPrevious = await this.transactionModel.find({
+      createdAt: { $gte: startOfPreviousPeriod, $lte: endOfPreviousPeriod },
+    });
+    let totalIncomePrevious = 0;
+    totalTransactionPrevious.forEach(
+      (transaction) => (totalIncomePrevious += transaction.amount),
     );
 
-    const totalTransactionToday = await this.transactionModel.find({
-      createdAt: { $gte: startOfToday, $lte: endOfToday },
-    });
-    let totalIncomeToday = 0;
-    totalTransactionToday.forEach(
-      (transaction) => (totalIncomeToday += transaction.amount),
-    );
-
-    const totalTransactionYesterday = await this.transactionModel.find({
-      createdAt: { $gte: startOfYesterday, $lte: endOfYesterday },
-    });
-    let totalIncomeYesterday = 0;
-    totalTransactionYesterday.forEach(
-      (transaction) => (totalIncomeYesterday += transaction.amount),
-    );
-
-    const totalCourseToday = await this.courseModel.find({
-      createdAt: { $gte: startOfToday, $lte: endOfToday },
+    const totalCourseCurrent = await this.courseModel.find({
+      createdAt: { $gte: startOfPeriod, $lte: endOfPeriod },
     });
 
-    const totalCourseYesterday = await this.courseModel.find({
-      createdAt: { $gte: startOfYesterday, $lte: endOfYesterday },
+    const totalCoursePrevious = await this.courseModel.find({
+      createdAt: { $gte: startOfPreviousPeriod, $lte: endOfPreviousPeriod },
     });
 
-    const totalNewUserToday = await this.userModel.find({
-      createdAt: { $gte: startOfToday, $lte: endOfToday },
+    const totalNewUserCurrent = await this.userModel.find({
+      createdAt: { $gte: startOfPeriod, $lte: endOfPeriod },
     });
 
-    const totalNewUserYesterday = await this.userModel.find({
-      createdAt: { $gte: startOfYesterday, $lte: endOfYesterday },
+    const totalNewUserPrevious = await this.userModel.find({
+      createdAt: { $gte: startOfPreviousPeriod, $lte: endOfPreviousPeriod },
     });
 
     const incomeDifferencePercent =
-      totalIncomeYesterday !== 0
-        ? ((totalIncomeToday - totalIncomeYesterday) / totalIncomeYesterday) *
+      totalIncomePrevious !== 0
+        ? ((totalIncomeCurrent - totalIncomePrevious) / totalIncomePrevious) *
           100
-        : totalIncomeToday !== 0
+        : totalIncomeCurrent !== 0
           ? 100
           : 0;
     const courseDifferencePercent =
-      totalCourseYesterday.length !== 0
-        ? ((totalCourseToday.length - totalCourseYesterday.length) /
-            totalCourseYesterday.length) *
+      totalCoursePrevious.length !== 0
+        ? ((totalCourseCurrent.length - totalCoursePrevious.length) /
+            totalCoursePrevious.length) *
           100
-        : totalCourseToday.length !== 0
+        : totalCourseCurrent.length !== 0
           ? 100
           : 0;
     const newUserDifferencePercent =
-      totalNewUserYesterday.length !== 0
-        ? ((totalNewUserToday.length - totalNewUserYesterday.length) /
-            totalNewUserYesterday.length) *
+      totalNewUserPrevious.length !== 0
+        ? ((totalNewUserCurrent.length - totalNewUserPrevious.length) /
+            totalNewUserPrevious.length) *
           100
-        : totalNewUserToday.length !== 0
+        : totalNewUserCurrent.length !== 0
           ? 100
           : 0;
 
     return {
       income: {
-        totalIncomeToday,
-        totalIncomeYesterday,
+        totalIncomeCurrent,
+        totalIncomePrevious,
         differencePercent: incomeDifferencePercent,
       },
       courses: {
-        totalCoursesToday: totalCourseToday.length,
-        totalCoursesYesterday: totalCourseYesterday.length,
+        totalCoursesCurrent: totalCourseCurrent.length,
+        totalCoursesPrevious: totalCoursePrevious.length,
         differencePercent: courseDifferencePercent,
       },
       newUsers: {
-        totalNewUsersToday: totalNewUserToday.length,
-        totalNewUsersYesterday: totalNewUserYesterday.length,
+        totalNewUsersCurrent: totalNewUserCurrent.length,
+        totalNewUsersPrevious: totalNewUserPrevious.length,
         differencePercent: newUserDifferencePercent,
       },
     };
@@ -198,7 +255,7 @@ export class AdminService {
     return [revenueOf9, revenueOf10, revenueOf11, revenueOf12];
   }
 
-  async statisticRevenueForCurrentWeek(): Promise<number[]> {
+  async statisticRevenueForCurrentWeek(): Promise<any> {
     const allTransaction = await this.transactionModel.find();
 
     function getMondayOfWeek(date: Date): Date {
@@ -214,7 +271,8 @@ export class AdminService {
     const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
 
-    const dailyRevenue = Array(7).fill(0);
+    const dayOfWeekRevenuePayProduct = Array(7).fill(0);
+    const dayOfWeekRevenuePaySchedule = Array(7).fill(0);
 
     allTransaction.forEach((transaction) => {
       const transactionDate = new Date(transaction.createdAt);
@@ -226,10 +284,48 @@ export class AdminService {
       );
 
       if (dayOffset >= 0 && transactionDate <= currentDate) {
-        dailyRevenue[dayOffset] += transaction.amount;
+        if (transaction.transaction_type === TransactionTypeEnum.PAY) {
+          dayOfWeekRevenuePayProduct[dayOffset] += transaction.amount;
+        } else if (
+          transaction.transaction_type === TransactionTypeEnum.SCHEDULE
+        ) {
+          dayOfWeekRevenuePaySchedule[dayOffset] += transaction.amount;
+        }
       }
     });
 
-    return dailyRevenue;
+    return { dayOfWeekRevenuePayProduct, dayOfWeekRevenuePaySchedule };
+  }
+
+  async statisticDomainForMonth(): Promise<any> {
+    const domain = await this.domainModel.findOne();
+    const listVisit = [0, 0, 0, 0];
+    const listPodcast = [0, 0, 0, 0];
+    const listSurvey = [0, 0, 0, 0];
+
+    const months = [domain.Sep, domain.Oct, domain.Nov, domain.Dec];
+
+    months.forEach((monthData, index) => {
+      monthData.forEach((item) => {
+        switch (item.type) {
+          case DomainEnum.VISIT:
+            listVisit[index] = item.quantity;
+            break;
+          case DomainEnum.MUSIC:
+          case DomainEnum.PODCAST:
+            listPodcast[index] += item.quantity;
+            break;
+          case DomainEnum.SURVEY:
+            listSurvey[index] = item.quantity;
+            break;
+        }
+      });
+    });
+
+    return {
+      visit: listVisit,
+      podcast: listPodcast,
+      survey: listSurvey,
+    };
   }
 }

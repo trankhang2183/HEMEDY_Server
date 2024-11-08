@@ -19,6 +19,7 @@ import {
   DoctorSchedule,
   DoctorScheduleSchema,
 } from 'src/doctor-schedule/entities/doctor-schedule.entity';
+import { DomainModel, DomainSchema } from 'src/auth/entities/domain.entity';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import {
       { name: Course.name, schema: CourseSchema },
       { name: User.name, schema: UserSchema },
       { name: DoctorSchedule.name, schema: DoctorScheduleSchema },
+      { name: DomainModel.name, schema: DomainSchema },
     ]),
   ],
   controllers: [AdminController],

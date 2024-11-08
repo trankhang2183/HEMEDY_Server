@@ -50,10 +50,10 @@ export class NotificationService {
 
   async getAllNotificationOfReceiver(user: any): Promise<any> {
     try {
-      const receiverId: number = user._id;
+      const receiverId: string = user._id;
       const notifications: Notification[] = await this.notificationRepository
         .find({
-          receiver: receiverId,
+          receiver_id: receiverId,
         })
         .sort({ createdAt: -1 });
       const total_notifications: number = notifications.filter(
@@ -67,13 +67,11 @@ export class NotificationService {
     }
   }
 
-  async getNotificationById(id: number): Promise<Notification> {
+  async getNotificationById(id: string): Promise<Notification> {
     try {
       const notification: Notification = await this.notificationRepository
-        .findOne({
-          _id: id,
-        })
-        .populate('receiver');
+        .findById(id)
+        .populate('receiver_id');
       if (!notification) {
         throw new NotFoundException('Không tìm thấy thông báo');
       }
@@ -84,17 +82,15 @@ export class NotificationService {
   }
 
   async updateNotificationOfReceiver(
-    id: number,
+    id: string,
     user: any,
   ): Promise<Notification> {
     const notification = await this.notificationRepository.findOne({
       _id: id,
-      receiver_id: user._id,
+      receiver_id: user._id.toString(),
     });
-    if (notification) {
-      throw new BadGatewayException(
-        'Không thể đánh dấu đã đọc thông báo của thông báo người khác',
-      );
+    if (!notification) {
+      throw new BadGatewayException('Không tìm thấy thông báo để cập nhật');
     }
     try {
       notification.is_new = false;
@@ -117,12 +113,15 @@ export class NotificationService {
       throw new NotFoundException('Người dùng không có thông báo');
     }
     const notifications = notifications_response[1];
-    notifications.forEach(
-      (notification: { is_new: boolean }) => (notification.is_new = false),
-    );
+    notifications.forEach((notification) => (notification.is_new = false));
+
     try {
-      const result: Notification[] = await notifications.save();
-      if (!result || result.length === 0) {
+      const result = [];
+      for (const notification of notifications) {
+        const savedNotification = await notification.save();
+        result.push(savedNotification);
+      }
+      if (result.length === 0) {
         throw new InternalServerErrorException(
           'Có lỗi xảy ra khi đánh dấu người nhận đã đọc tất cả thông báo',
         );

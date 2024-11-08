@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Roles } from 'src/auth/role.decorator';
@@ -26,9 +26,9 @@ export class AdminController {
   @ApiOperation({
     summary: 'Get Statistic Date Sales',
   })
-  @Get('statistic-date-sales')
-  statisticDateSales(): Promise<any> {
-    return this.adminService.statisticDateSales();
+  @Get('statistic-sales/:param')
+  statisticSales(@Param('param') param: string): Promise<any> {
+    return this.adminService.statisticSales(param);
   }
 
   @ApiOperation({
@@ -53,5 +53,13 @@ export class AdminController {
   @Get('statistic-revenue-current-week')
   statisticRevenueForCurrentWeek(): Promise<any> {
     return this.adminService.statisticRevenueForCurrentWeek();
+  }
+
+  @ApiOperation({
+    summary: 'Get Statistic Domain Monthly',
+  })
+  @Get('statistic-domain-monthly')
+  statisticDomainForMonth(): Promise<any> {
+    return this.adminService.statisticDomainForMonth();
   }
 }

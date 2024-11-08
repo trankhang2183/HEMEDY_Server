@@ -69,7 +69,7 @@ export class NotificationController {
   @ApiBearerAuth()
   @UseGuards(JwtGuard)
   @Get(':id')
-  getNotificationById(@Param('id') id: number): Promise<Notification> {
+  getNotificationById(@Param('id') id: string): Promise<Notification> {
     return this.notificationService.getNotificationById(id);
   }
 
@@ -104,7 +104,7 @@ export class NotificationController {
   @UseGuards(JwtGuard)
   @Patch('read/:id')
   updateNotificationOfReceiver(
-    @Param('id') id: number,
+    @Param('id') id: string,
     @GetUser() user: User,
   ): Promise<Notification> {
     return this.notificationService.updateNotificationOfReceiver(id, user);

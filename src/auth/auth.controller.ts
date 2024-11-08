@@ -29,11 +29,44 @@ import { RolesGuard } from './role.guard';
 import { Roles } from './role.decorator';
 import { RoleEnum } from 'src/role/enum/role.enum';
 import { UpRoleAccountDto } from './dto/upRole-account.dto';
+import { DomainModel } from './entities/domain.entity';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @ApiOperation({
+    summary: 'Increase Quantity User Visit Website',
+  })
+  @Get('/increase-quantity-user-visit')
+  async increaseQuantityUserVisit(): Promise<DomainModel> {
+    return this.authService.increaseQuantityUserVisit();
+  }
+
+  @ApiOperation({
+    summary: 'Increase Quantity Listening Music',
+  })
+  @Get('/increase-quantity-listen-music')
+  async increaseQuantityListenMusic(): Promise<DomainModel> {
+    return this.authService.increaseQuantityListenMusic();
+  }
+
+  @ApiOperation({
+    summary: 'Increase Quantity Listening Podcast',
+  })
+  @Get('/increase-quantity-listen-podcast')
+  async increaseQuantityListenPodcast(): Promise<DomainModel> {
+    return this.authService.increaseQuantityListenPodcast();
+  }
+
+  @ApiOperation({
+    summary: 'Increase Quantity Take Survey',
+  })
+  @Get('/increase-quantity-take-survey')
+  async increaseQuantityTakeSurvey(): Promise<DomainModel> {
+    return this.authService.increaseQuantityTakeSurvey();
+  }
 
   @ApiOperation({
     summary: 'Sign In with Google to get Access Token For Customer',
