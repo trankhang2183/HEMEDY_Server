@@ -129,11 +129,13 @@ export class AdminService {
       (transaction) => (totalIncomePrevious += transaction.amount),
     );
 
-    const totalCourseCurrent = await this.courseModel.find({
+    const totalCourseCurrent = await this.transactionModel.find({
+      transaction_type: TransactionTypeEnum.PAY,
       createdAt: { $gte: startOfPeriod, $lte: endOfPeriod },
     });
 
-    const totalCoursePrevious = await this.courseModel.find({
+    const totalCoursePrevious = await this.transactionModel.find({
+      transaction_type: TransactionTypeEnum.PAY,
       createdAt: { $gte: startOfPreviousPeriod, $lte: endOfPreviousPeriod },
     });
 
@@ -189,7 +191,9 @@ export class AdminService {
   }
 
   async statisticTopService(): Promise<any> {
-    const allCourses = await this.courseModel.find();
+    const allCourses = await this.transactionModel.find({
+      transaction_type: TransactionTypeEnum.PAY,
+    });
     const allSchedule = await this.doctorScheduleModel.find();
     const onlineSchedule = allSchedule.filter(
       (schedule) =>

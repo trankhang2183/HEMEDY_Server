@@ -22,7 +22,11 @@ export class UserService {
 
   async getUsers(): Promise<[{ totalUsers: number }, User[]]> {
     try {
-      let users = await this.userModel.find().populate('role').exec();
+      let users = await this.userModel
+        .find()
+        .sort({ createdAt: -1 })
+        .populate('role')
+        .exec();
 
       if (!users || users.length === 0) {
         return [{ totalUsers: 0 }, []];
@@ -42,8 +46,6 @@ export class UserService {
 
       const totalUsers = users.length;
 
-      // users.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
       return [{ totalUsers }, users];
     } catch (error) {
       throw new NotFoundException(error.message);
@@ -55,6 +57,7 @@ export class UserService {
       const users = await this.userModel
         .find({ role_name: RoleEnum.DOCTOR })
         .populate('role')
+        .sort({ createdAt: -1 })
         .exec();
 
       if (!users || users.length === 0) {

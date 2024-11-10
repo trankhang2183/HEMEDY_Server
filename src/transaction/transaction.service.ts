@@ -1542,10 +1542,12 @@ export class TransactionService {
   }
 
   async getAllCoursesOfUser(user: any): Promise<Transaction[]> {
-    const transactions = await this.transactionModel.find({
-      user_id: user._id,
-      transaction_type: TransactionTypeEnum.PAY,
-    });
+    const transactions = await this.transactionModel
+      .find({
+        user_id: user._id,
+        transaction_type: TransactionTypeEnum.PAY,
+      })
+      .sort({ createdAt: -1 });
     if (!transactions) {
       throw new InternalServerErrorException(
         'Something went wrong when getting all courses',
@@ -1555,9 +1557,11 @@ export class TransactionService {
   }
 
   async getAllTransactionOfUser(user: any): Promise<Transaction[]> {
-    const transactions = await this.transactionModel.find({
-      user_id: user._id,
-    });
+    const transactions = await this.transactionModel
+      .find({
+        user_id: user._id,
+      })
+      .sort({ createdAt: -1 });
     if (!transactions) {
       throw new InternalServerErrorException(
         'Something went wrong when getting all courses',
