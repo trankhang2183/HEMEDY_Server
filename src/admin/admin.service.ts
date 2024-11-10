@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { DomainModel } from 'src/auth/entities/domain.entity';
@@ -110,7 +110,7 @@ export class AdminService {
         break;
 
       default:
-        throw new Error('Invalid parameter');
+        throw new BadRequestException('Invalid parameter');
     }
 
     const totalTransactionCurrent = await this.transactionModel.find({
